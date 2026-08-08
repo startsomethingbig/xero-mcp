@@ -213,6 +213,16 @@ npm run build
 pnpm build
 ```
 
+### Future development commands
+
+The following commands are planned for the modernised server and are not
+available until the HTTP transport work in Task 3 is complete:
+
+```bash
+npm run dev -- stdio
+npm run dev -- http
+```
+
 ### Integrating with Claude Desktop
 
 To link your Xero MCP server in development to Claude Desktop go to Settings > Developer > Edit config and add the following to your `claude_desktop_config.json` file:
