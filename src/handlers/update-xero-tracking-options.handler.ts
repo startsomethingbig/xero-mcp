@@ -1,7 +1,7 @@
 import { TrackingOption } from "xero-node";
 import { xeroClient } from "../clients/xero-client.js";
 import { formatError } from "../helpers/format-error.js";
-import { getClientHeaders } from "../helpers/get-client-headers.js";
+import { getClientHeaders } from "../clients/xero-client.js";
 import { XeroClientResponse } from "../types/tool-response.js";
 
 type TrackingOptionStatus = "ACTIVE" | "ARCHIVED";

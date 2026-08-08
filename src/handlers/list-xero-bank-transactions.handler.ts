@@ -1,6 +1,6 @@
 import { xeroClient } from "../clients/xero-client.js";
 import { BankTransaction } from "xero-node";
-import { getClientHeaders } from "../helpers/get-client-headers.js";
+import { getClientHeaders } from "../clients/xero-client.js";
 import { XeroClientResponse } from "../types/tool-response.js";
 import { formatError } from "../helpers/format-error.js";
 

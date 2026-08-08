@@ -1,7 +1,7 @@
 import { xeroClient } from "../clients/xero-client.js";
 import { XeroClientResponse } from "../types/tool-response.js";
 import { formatError } from "../helpers/format-error.js";
-import { getClientHeaders } from "../helpers/get-client-headers.js";
+import { getClientHeaders } from "../clients/xero-client.js";
 // Import the correct types - using the proper namespace
 import { EmployeeLeave } from "../types/payroll-nz-types.js";
 

@@ -2,7 +2,7 @@ import { xeroClient } from "../clients/xero-client.js";
 import { XeroClientResponse } from "../types/tool-response.js";
 import { formatError } from "../helpers/format-error.js";
 import { TaxRate } from "xero-node";
-import { getClientHeaders } from "../helpers/get-client-headers.js";
+import { getClientHeaders } from "../clients/xero-client.js";
 
 async function getTaxRates(): Promise<TaxRate[]> {
   await xeroClient.authenticate();
