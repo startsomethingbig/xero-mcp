@@ -2,6 +2,16 @@ import { describe, expect, it } from "vitest";
 import { loadEnvironment } from "./environment.js";
 
 describe("loadEnvironment", () => {
+  it("requires an explicit confirmation secret", () => {
+    expect(() =>
+      loadEnvironment({
+        XERO_CLIENT_ID: "client",
+        XERO_CLIENT_SECRET: "test-secret",
+        XERO_TENANT_ID: "tenant",
+      }),
+    ).toThrow("XERO_CONFIRMATION_SECRET is required");
+  });
+
   it("requires an explicit tenant and redacts secret values", () => {
     expect(() =>
       loadEnvironment({
