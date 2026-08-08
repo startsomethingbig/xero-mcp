@@ -77,7 +77,7 @@ Expected: FAIL with a module-not-found error for `environment.js`.
 
 - [ ] **Step 3: Replace the v1 MCP package and add the configuration module**
 
-In `package.json`, remove `@modelcontextprotocol/sdk`; add `@modelcontextprotocol/server`, `@modelcontextprotocol/node`, `@modelcontextprotocol/client`, and `tsx` at the current compatible release line. Add scripts: `dev: tsx src/index.ts`, `typecheck: tsc --noEmit`, `test:unit: vitest run`, and `test:eval: vitest run src/evals`. Add `"types": ["node"]` in `tsconfig.json`.
+In `package.json`, retain `@modelcontextprotocol/sdk` v1 temporarily so the untouched legacy source continues to compile through Task 1; add `@modelcontextprotocol/server`, `@modelcontextprotocol/node`, `@modelcontextprotocol/client`, and `tsx` at the current compatible release line. Task 2 removes v1 immediately after replacing every legacy MCP import. Add scripts: `dev: tsx src/index.ts`, `typecheck: tsc --noEmit`, `test:unit: vitest run`, and `test:eval: vitest run src/evals`. Add `"types": ["node"]` in `tsconfig.json`.
 
 Implement:
 
@@ -112,7 +112,7 @@ git commit -m "chore: establish MCP v2 configuration baseline"
 
 **Files:**
 - Create: `src/mcp/server.ts`, `src/transports/http.ts`, `src/transports/stdio.ts`, `src/transports/http.test.ts`, `src/transports/stdio.test.ts`
-- Modify: `src/index.ts`
+- Modify: `src/index.ts`, `package.json`, `package-lock.json`
 - Delete: `src/server/xero-mcp-server.ts`
 
 **Interfaces:**
@@ -145,7 +145,7 @@ Expected: FAIL with a module-not-found error for `http.js`.
 
 - [ ] **Step 3: Implement the server factory and transports using the v2 entry points**
 
-Use `createMcpHandler(createXeroMcpServer, { legacy: "reject", responseMode: "json" })` and `toNodeHandler` to mount one handler at `/mcp`. Reject every other method/path with 404 or 405. Place host and origin validation middleware before the handler; allow configured `MCP_ALLOWED_ORIGINS` and localhost for local development. Use `serveStdio(createXeroMcpServer)` for stdio.
+Use `createMcpHandler(createXeroMcpServer, { legacy: "reject", responseMode: "json" })` and `toNodeHandler` to mount one handler at `/mcp`. Reject every other method/path with 404 or 405. Place host and origin validation middleware before the handler; allow configured `MCP_ALLOWED_ORIGINS` and localhost for local development. Use `serveStdio(createXeroMcpServer)` for stdio. After all source imports use v2 packages, remove `@modelcontextprotocol/sdk` v1 from `package.json` and regenerate the lockfile.
 
 `src/index.ts` must parse exactly one optional mode argument: no argument or `stdio` starts stdio; `http` starts the HTTP listener on `environment.port`; any other mode writes a usage error to stderr and exits 2.
 
