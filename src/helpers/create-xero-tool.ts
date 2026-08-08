@@ -1,14 +1,13 @@
-import { ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ToolDefinition } from "../types/tool-definition.js";
-import { ZodRawShapeCompat } from "@modelcontextprotocol/sdk/server/zod-compat.js";
+import { z } from "zod";
 
 export const CreateXeroTool =
-  <Args extends ZodRawShapeCompat>(
+  <Args extends z.ZodRawShape>(
     name: string,
     description: string,
     schema: Args,
-    handler: ToolCallback<Args>,
-  ): (() => ToolDefinition<ZodRawShapeCompat>) =>
+    handler: ToolDefinition<Args>["handler"],
+  ): (() => ToolDefinition<Args>) =>
   () => ({
     name: name,
     description: description,

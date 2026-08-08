@@ -1,18 +1,36 @@
 #!/usr/bin/env node
 
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { XeroMcpServer } from "./server/xero-mcp-server.js";
-import { ToolFactory } from "./tools/tool-factory.js";
+import { loadEnvironment } from "./config/environment.js";
+import { createXeroMcpServer } from "./mcp/server.js";
+import { createHttpServer } from "./transports/http.js";
+import { serveStdio } from "./transports/stdio.js";
 
 const main = async () => {
-  // Create an MCP server
-  const server = XeroMcpServer.GetServer();
+  const args = process.argv.slice(2);
+  const mode = args[0];
 
-  ToolFactory(server);
+  if (
+    args.length > 1 ||
+    (mode !== undefined && mode !== "stdio" && mode !== "http")
+  ) {
+    console.error("Usage: xero-mcp-server [stdio|http]");
+    process.exitCode = 2;
+    return;
+  }
 
-  // Start receiving messages on stdin and sending messages on stdout
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  const environment = loadEnvironment(process.env);
+  const dependencies = {};
+
+  if (mode === "http") {
+    await new Promise<void>((resolve, reject) => {
+      const server = createHttpServer(dependencies);
+      server.once("error", reject);
+      server.listen(environment.port, resolve);
+    });
+    return;
+  }
+
+  await serveStdio(() => createXeroMcpServer(dependencies));
 };
 
 main().catch((error) => {

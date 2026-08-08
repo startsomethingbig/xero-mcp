@@ -1,14 +1,21 @@
-import { ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
-import {
-  ZodRawShapeCompat,
-  AnySchema,
-} from "@modelcontextprotocol/sdk/server/zod-compat.js";
+import type {
+  CallToolResult,
+  InputRequiredResult,
+  ServerContext,
+} from "@modelcontextprotocol/server";
+import { z } from "zod";
 
-export interface ToolDefinition<
-  Args extends undefined | ZodRawShapeCompat | AnySchema = undefined,
-> {
+type ToolHandler<Args extends z.ZodRawShape> = (
+  args: z.infer<z.ZodObject<Args>>,
+  context: ServerContext,
+) =>
+  | CallToolResult
+  | InputRequiredResult
+  | Promise<CallToolResult | InputRequiredResult>;
+
+export interface ToolDefinition<Args extends z.ZodRawShape> {
   name: string;
   description: string;
   schema: Args;
-  handler: ToolCallback<Args>;
+  handler: ToolHandler<Args>;
 }
