@@ -24,6 +24,8 @@ describe("DraftResourceRegistry", () => {
     expect(registry.get("credit_note")?.kind).toBe("credit_note");
     expect(registry.get("quote")?.kind).toBe("quote");
     expect(registry.get("purchase_order")?.kind).toBe("purchase_order");
+    expect(registry.get("manual_journal")?.kind).toBe("manual_journal");
+    expect(registry.get("bank_transaction")).toBeUndefined();
   });
 
   it("rejects duplicate resource kinds instead of depending on order", () => {

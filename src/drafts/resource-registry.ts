@@ -1,6 +1,7 @@
 import type { XeroApi } from "../xero/client.js";
 import { createCreditNoteAdapter } from "../xero/draft-adapters/credit-note.js";
 import { createInvoiceAdapter } from "../xero/draft-adapters/invoice.js";
+import { createManualJournalAdapter } from "../xero/draft-adapters/manual-journal.js";
 import { createPurchaseOrderAdapter } from "../xero/draft-adapters/purchase-order.js";
 import { createQuoteAdapter } from "../xero/draft-adapters/quote.js";
 import type { DraftResourceAdapter } from "./types.js";
@@ -32,5 +33,6 @@ export function createDraftResourceRegistry(
     createCreditNoteAdapter(api),
     createQuoteAdapter(api),
     createPurchaseOrderAdapter(api),
+    createManualJournalAdapter(api),
   ]);
 }
