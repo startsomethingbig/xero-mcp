@@ -69,7 +69,8 @@ describe("formatError", () => {
             httpStatusCode: "MethodNotAllowed",
             problem: {
               title: "MethodNotAllowed",
-              detail: "Method not allowed for the current customer jurisdiction.",
+              detail:
+                "Method not allowed for the current customer jurisdiction.",
               status: 405,
             },
           },
@@ -125,6 +126,19 @@ describe("formatError", () => {
       expect(formatError(new Error("Employee ID is required"))).toBe(
         "Employee ID is required",
       );
+    });
+
+    it.each([
+      "Authorization: Bearer secret-token",
+      "client_secret=secret-value",
+      'clientSecret: "secret-value"',
+      "XERO_CLIENT_SECRET=secret-value",
+    ])("redacts a credential-bearing message: %s", (message) => {
+      const result = formatError(new Error(message));
+
+      expect(result).toBe("An error occurred while communicating with Xero.");
+      expect(result).not.toContain("secret-value");
+      expect(result).not.toContain("secret-token");
     });
   });
 

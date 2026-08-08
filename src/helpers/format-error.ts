@@ -17,6 +17,22 @@ interface XeroSdkError {
   };
 }
 
+const SAFE_XERO_ERROR = "An error occurred while communicating with Xero.";
+
+function containsCredential(message: string): boolean {
+  return (
+    /(?:authorization\s*:\s*)?bearer\s+[^\s,;]+/i.test(message) ||
+    /["']?(?:xero[_-])?client[_-]?secret["']?\s*(?:=|:)\s*/i.test(message)
+  );
+}
+
+function safeMessage(message: unknown, fallback: string): string {
+  if (typeof message !== "string" || containsCredential(message)) {
+    return fallback;
+  }
+  return message;
+}
+
 function isXeroSdkError(error: unknown): error is XeroSdkError {
   if (typeof error !== "object" || error === null) return false;
   const response = (error as { response?: unknown }).response;
@@ -56,7 +72,7 @@ export function formatError(error: unknown): string {
       const mapped = formatHttpStatus(status);
       if (mapped) return mapped;
     }
-    return detail || "An error occurred while communicating with Xero.";
+    return safeMessage(detail, SAFE_XERO_ERROR);
   }
 
   if (isXeroSdkError(error)) {
@@ -68,11 +84,14 @@ export function formatError(error: unknown): string {
     const problem = body?.problem;
     const title = problem?.title ?? body?.httpStatusCode ?? "HTTP error";
     const detail = problem?.detail ?? body?.Detail;
-    return detail ? `${status} ${title}: ${detail}` : `${status} ${title}`;
+    const message = detail
+      ? `${status} ${title}: ${detail}`
+      : `${status} ${title}`;
+    return safeMessage(message, SAFE_XERO_ERROR);
   }
 
   if (error instanceof Error) {
-    return error.message;
+    return safeMessage(error.message, SAFE_XERO_ERROR);
   }
 
   return "An unexpected error occurred while communicating with Xero.";

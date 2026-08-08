@@ -35,6 +35,7 @@ type ResourceBinding = {
   updateMethod: string;
   usesUnitdp: boolean;
   summarizesCreate: boolean;
+  supportsGenericDelete?: boolean;
 };
 
 const RESOURCE_BINDINGS: Record<string, ResourceBinding> = {
@@ -93,6 +94,7 @@ const RESOURCE_BINDINGS: Record<string, ResourceBinding> = {
     updateMethod: "updateReceipt",
     usesUnitdp: true,
     summarizesCreate: false,
+    supportsGenericDelete: false,
   },
 };
 
@@ -220,6 +222,9 @@ export function createXeroApi(
     },
     async delete<TRecord>(resource: string, id: string) {
       const binding = requireSupportedResource(resource);
+      if (binding.supportsGenericDelete === false) {
+        throw new UnsupportedDraftResourceError(resource);
+      }
       try {
         await authenticate();
         const prefix: unknown[] = [

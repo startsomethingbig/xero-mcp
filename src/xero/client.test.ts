@@ -295,7 +295,7 @@ describe("createXeroApi", () => {
     },
   );
 
-  it.each(resourceCases)(
+  it.each(resourceCases.filter(({ resource }) => resource !== "receipt"))(
     "deletes $resource through its documented status update",
     async (resourceCase) => {
       const sdk = fakeSdkForDraftResources();
@@ -316,6 +316,17 @@ describe("createXeroApi", () => {
       );
     },
   );
+
+  it("defers receipt deletion until receipt context and legacy scope are available", async () => {
+    const sdk = fakeSdkForDraftResources();
+    const api = createXeroApi(environment, sdk);
+
+    await expect(api.delete("receipt", "receipt-1")).rejects.toBeInstanceOf(
+      UnsupportedDraftResourceError,
+    );
+    expect(sdk.getClientCredentialsToken).not.toHaveBeenCalled();
+    expect(sdk.accountingApi.updateReceipt).not.toHaveBeenCalled();
+  });
 });
 
 describe("formatXeroError", () => {

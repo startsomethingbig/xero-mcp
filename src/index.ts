@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 
+import dotenv from "dotenv";
+
 import { loadEnvironment } from "./config/environment.js";
 import { createXeroMcpServer } from "./mcp/server.js";
 import { createHttpServer } from "./transports/http.js";
 import { serveStdio } from "./transports/stdio.js";
+
+dotenv.config();
 
 const main = async () => {
   const args = process.argv.slice(2);
