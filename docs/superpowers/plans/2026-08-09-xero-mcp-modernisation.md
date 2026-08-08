@@ -199,6 +199,8 @@ Expected: FAIL with `createXeroApi is not a function` or module-not-found.
 
 Move SDK construction behind `createXeroApi(environment, sdk = new XeroClient(...))`. Authenticate with configured client credentials, always select `environment.tenantId`, and map errors through `formatXeroError`. Remove module-load environment validation. Keep the existing exported `xeroClient` only as a deprecated compatibility shim for the unported legacy read handlers; dependency-inject `XeroApi` into every new adapter. Task 10 removes that shim after it migrates the legacy reads.
 
+In the same task, remove the legacy create, update, and delete registrations from `ToolFactory` so no globally coupled write tool remains discoverable. Keep only legacy get/list registration until Task 10 deletes the old factory. Load `.env` once in the CLI entry point before `loadEnvironment`, while preserving pure environment validation. Update the shared legacy error formatter to redact bearer credentials and client secrets. Do not expose generic receipt deletion in `XeroApi`; Task 8 owns receipt-specific deletion payload construction and the deprecated `accounting.transactions` scope prerequisite.
+
 Define the domain contracts:
 
 ```ts
