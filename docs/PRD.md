@@ -43,7 +43,7 @@ The server must never create, update, delete, approve, submit, authorise, void, 
 
 4. **Draft-only mutation tools**
    - Provide create, update, and delete operations for every SDK-exposed Xero resource whose documented lifecycle includes `DRAFT` and whose endpoint permits the requested operation while it is a draft.
-   - Initial discovery must verify the exact resource registry against the selected Xero SDK and API documentation. Likely candidates include invoices (sales invoices and bills), credit notes, quotes, purchase orders, bank transactions, and manual journals. This list is not permission to mutate resources that lack a `DRAFT` lifecycle.
+   - The initial registry contains invoices (sales invoices and bills), credit notes, quotes, purchase orders, manual journals, repeating-invoice templates, and receipts. Receipts are supported only for Xero organisations that still have access to the deprecated classic expense-claims API. Bank transactions are explicitly excluded: Xero documents no `DRAFT` status for them. This list is not permission to mutate resources that lack a `DRAFT` lifecycle.
    - Force status `DRAFT` on create; reject a supplied status or action that is not exactly `DRAFT`.
    - Before update or delete, fetch the record and reject it unless its Xero status is exactly `DRAFT`.
    - Do not expose general write tools for contacts, payments, payroll, items, accounts, tracking configuration, or any other resource without a documented draft lifecycle.

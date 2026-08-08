@@ -46,6 +46,8 @@ Remote multi-user OAuth is deliberately excluded. It would require encrypted per
 
 This closes the main safety failure mode: adding a convenient generic write adapter accidentally enables non-draft accounting mutations.
 
+The initial allow-list is invoice, credit note, quote, purchase order, manual journal, repeating-invoice template, and receipt. Receipt support is conditional on the connected organisation retaining Xero's deprecated classic expense-claims feature. Bank transactions are never registered because their documented statuses are `AUTHORISED` and `DELETED`, not `DRAFT`.
+
 ### Two-step operations
 
 Each resource yields four tool families:
