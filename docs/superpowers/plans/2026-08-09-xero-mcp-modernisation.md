@@ -77,7 +77,7 @@ Expected: FAIL with a module-not-found error for `environment.js`.
 
 - [ ] **Step 3: Replace the v1 MCP package and add the configuration module**
 
-In `package.json`, remove `@modelcontextprotocol/sdk`; add `@modelcontextprotocol/server`, `@modelcontextprotocol/node`, and `@modelcontextprotocol/client` at the current v2 release line. Add scripts: `typecheck: tsc --noEmit`, `test:unit: vitest run`, and `test:eval: vitest run src/evals`. Add `"types": ["node"]` in `tsconfig.json`.
+In `package.json`, remove `@modelcontextprotocol/sdk`; add `@modelcontextprotocol/server`, `@modelcontextprotocol/node`, `@modelcontextprotocol/client`, and `tsx` at the current compatible release line. Add scripts: `dev: tsx src/index.ts`, `typecheck: tsc --noEmit`, `test:unit: vitest run`, and `test:eval: vitest run src/evals`. Add `"types": ["node"]` in `tsconfig.json`.
 
 Implement:
 
@@ -197,7 +197,7 @@ Expected: FAIL with `createXeroApi is not a function` or module-not-found.
 
 - [ ] **Step 3: Implement the wrapper and replace global authentication**
 
-Move SDK construction behind `createXeroApi(environment, sdk = new XeroClient(...))`. Authenticate with configured client credentials, always select `environment.tenantId`, and map errors through `formatXeroError`. Remove module-load environment validation and the exported global `xeroClient`; dependency-inject `XeroApi` into adapters instead.
+Move SDK construction behind `createXeroApi(environment, sdk = new XeroClient(...))`. Authenticate with configured client credentials, always select `environment.tenantId`, and map errors through `formatXeroError`. Remove module-load environment validation. Keep the existing exported `xeroClient` only as a deprecated compatibility shim for the unported legacy read handlers; dependency-inject `XeroApi` into every new adapter. Task 10 removes that shim after it migrates the legacy reads.
 
 Define the domain contracts:
 
@@ -221,7 +221,7 @@ export interface DraftResourceAdapter<P, R> {
 
 Run: `npm test -- src/xero/client.test.ts && npm test && npm run lint && npm run typecheck`
 
-Expected: PASS. No existing handler imports `xeroClient` after this task.
+Expected: PASS. Every new adapter receives an injected `XeroApi`; the legacy exported `xeroClient` remains only as a temporary compatibility shim for existing read handlers until Task 10 migrates and removes it.
 
 - [ ] **Step 5: Commit the domain boundary**
 
