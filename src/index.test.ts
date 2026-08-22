@@ -25,7 +25,7 @@ const mocks = vi.hoisted(() => ({
     listen: mocks.listen,
     address: () => ({ address: "127.0.0.1", family: "IPv4", port: 3000 }),
   })),
-  serveStdio: vi.fn(async () => undefined),
+  serveStdio: vi.fn(() => ({ close: vi.fn(async () => undefined) })),
 }));
 
 vi.mock("dotenv", () => ({
@@ -64,6 +64,49 @@ describe("CLI environment bootstrap", () => {
     process.argv = originalArgv;
     stderr.mockRestore();
     stdout.mockRestore();
+    process.removeAllListeners("SIGINT");
+    process.removeAllListeners("SIGTERM");
+  });
+
+  it("redacts a credential-bearing startup failure and exits 1", async () => {
+    const exit = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
+    mocks.createServerDependencies.mockImplementationOnce(() => {
+      throw new Error("token request failed: Authorization: Bearer LEAKY");
+    });
+
+    await import("./index.js");
+    await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(1));
+
+    const printed = stderr.mock.calls
+      .map((call: unknown[]) => call.join(" "))
+      .join("\n");
+    expect(printed).not.toContain("LEAKY");
+    expect(printed).toMatch(/xero-mcp/);
+    exit.mockRestore();
+  });
+
+  it("wires stdio error reporting and shuts down on SIGINT", async () => {
+    const exit = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
+
+    await import("./index.js");
+    await vi.waitFor(() => expect(mocks.serveStdio).toHaveBeenCalledOnce());
+
+    expect(mocks.serveStdio).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ onerror: expect.any(Function) }),
+    );
+    const handle = mocks.serveStdio.mock.results[0]!.value as {
+      close: ReturnType<typeof vi.fn>;
+    };
+    expect(process.listenerCount("SIGINT")).toBe(1);
+    process.emit("SIGINT");
+    await vi.waitFor(() => expect(handle.close).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(0));
+    exit.mockRestore();
   });
 
   it("loads http-mode configuration and binds only to the configured host", async () => {

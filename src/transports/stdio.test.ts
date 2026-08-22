@@ -3,7 +3,7 @@ import {
   type JSONRPCMessage,
   type McpServerFactory,
 } from "@modelcontextprotocol/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createXeroMcpServer } from "../mcp/server.js";
 import { createTestDependencies } from "../test/dependencies.js";
 import { serveStdio } from "./stdio.js";
@@ -30,7 +30,7 @@ describe("stdio transport", () => {
     const response = nextMessage(clientTransport);
 
     await clientTransport.start();
-    await serveStdio(factory, serverTransport);
+    serveStdio(factory, { transport: serverTransport });
     await clientTransport.send({
       jsonrpc: "2.0",
       id: 1,
@@ -59,10 +59,9 @@ describe("stdio transport", () => {
     const response = nextMessage(clientTransport);
 
     await clientTransport.start();
-    await serveStdio(
-      () => createXeroMcpServer(createTestDependencies()),
-      serverTransport,
-    );
+    serveStdio(() => createXeroMcpServer(createTestDependencies()), {
+      transport: serverTransport,
+    });
     await clientTransport.send({
       jsonrpc: "2.0",
       id: 1,
@@ -71,5 +70,39 @@ describe("stdio transport", () => {
     });
 
     expect(await response).toMatchObject({ error: { code: -32022 } });
+  });
+
+  it("returns a handle that closes the transport", async () => {
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const closed = new Promise<void>((resolve) => {
+      clientTransport.onclose = () => resolve();
+    });
+    await clientTransport.start();
+
+    const handle = serveStdio(
+      () => createXeroMcpServer(createTestDependencies()),
+      { transport: serverTransport },
+    );
+    await handle.close();
+
+    await expect(closed).resolves.toBeUndefined();
+  });
+
+  it("forwards transport errors to onerror", async () => {
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const onerror = vi.fn();
+    await clientTransport.start();
+
+    serveStdio(() => createXeroMcpServer(createTestDependencies()), {
+      transport: serverTransport,
+      onerror,
+    });
+    serverTransport.onerror?.(new Error("boom"));
+
+    await vi.waitFor(() =>
+      expect(onerror).toHaveBeenCalledWith(expect.any(Error)),
+    );
   });
 });

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { AxiosError, AxiosHeaders } from "axios";
-import { formatError } from "../format-error.js";
+import { formatError, redactErrorMessage } from "../format-error.js";
 
 function makeAxiosError(status: number, detail?: string): AxiosError {
   const headers = new AxiosHeaders();
@@ -168,5 +168,47 @@ describe("formatError", () => {
         "An unexpected error occurred while communicating with Xero.",
       );
     });
+  });
+});
+
+describe("redactErrorMessage", () => {
+  it("prints the name and message of an ordinary error, never a stack", () => {
+    const error = new RangeError("PORT must be an integer between 0 and 65535");
+
+    const output = redactErrorMessage(error);
+
+    expect(output).toBe(
+      "RangeError: PORT must be an integer between 0 and 65535",
+    );
+    expect(output).not.toContain("    at ");
+  });
+
+  it("replaces a message that carries a bearer token", () => {
+    const output = redactErrorMessage(
+      new Error("Request failed: Authorization: Bearer LEAKY_TOKEN"),
+    );
+
+    expect(output).not.toContain("LEAKY_TOKEN");
+    expect(output).toMatch(/redacted/i);
+  });
+
+  it("scrubs known secret literals wherever they appear", () => {
+    const output = redactErrorMessage(
+      new Error("invalid_client for s3cr3t-client-secret (token abc123)"),
+      ["s3cr3t-client-secret", "abc123"],
+    );
+
+    expect(output).not.toContain("s3cr3t-client-secret");
+    expect(output).not.toContain("abc123");
+    expect(output).toContain("invalid_client");
+  });
+
+  it("never stringifies a non-Error throwable", () => {
+    const output = redactErrorMessage({
+      request: { headers: { authorization: "Bearer LEAKY_TOKEN" } },
+    });
+
+    expect(output).not.toContain("LEAKY_TOKEN");
+    expect(output).not.toContain("authorization");
   });
 });

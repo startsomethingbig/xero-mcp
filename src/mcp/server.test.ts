@@ -11,10 +11,9 @@ const WRITE_TOOL_PATTERN =
 async function listToolNames(): Promise<string[]> {
   const [clientTransport, serverTransport] =
     InMemoryTransport.createLinkedPair();
-  await serveStdio(
-    () => createXeroMcpServer(createTestDependencies()),
-    serverTransport,
-  );
+  serveStdio(() => createXeroMcpServer(createTestDependencies()), {
+    transport: serverTransport,
+  });
 
   const client = new Client(
     { name: "test", version: "1" },

@@ -19,7 +19,7 @@ interface XeroSdkError {
 
 const SAFE_XERO_ERROR = "An error occurred while communicating with Xero.";
 
-function containsCredential(message: string): boolean {
+export function containsCredential(message: string): boolean {
   return (
     /(?:authorization\s*:\s*)?bearer\s+[^\s,;]+/i.test(message) ||
     /["']?(?:xero[_-])?client[_-]?secret["']?\s*(?:=|:)\s*/i.test(message)
@@ -95,4 +95,32 @@ export function formatError(error: unknown): string {
   }
 
   return "An unexpected error occurred while communicating with Xero.";
+}
+
+/**
+ * Render an arbitrary throwable for a log line without ever printing a stack
+ * trace or the raw object graph (xero-node rejections carry Authorization
+ * headers). Known secret literals are scrubbed; a message that looks like it
+ * carries a credential is replaced wholesale.
+ */
+export function redactErrorMessage(
+  error: unknown,
+  secrets: readonly string[] = [],
+): string {
+  const name = error instanceof Error ? error.name : "Error";
+  let message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "Unknown error";
+
+  for (const secret of secrets) {
+    if (secret) message = message.split(secret).join("[redacted]");
+  }
+  if (containsCredential(message)) {
+    message = "[redacted: message contained a credential]";
+  }
+
+  return `${name}: ${message}`;
 }
