@@ -4,7 +4,9 @@ This is a Model Context Protocol (MCP) server implementation for Xero. It provid
 
 ## Features
 
-- Xero OAuth2 authentication with custom connections
+- Xero OAuth2 authentication with custom connections (single tenant)
+- MCP `2026-07-28` over stdio and authenticated stateless HTTP
+- Draft-only, preview-confirmed mutations
 - Contact management
 - Chart of Accounts management
 - Invoice creation and management
@@ -34,35 +36,40 @@ We recommend using a Demo Company to start with because it comes with some pre-l
 
 NOTE: To use Payroll-specific queries, the region should be either NZ or UK.
 
-### Authentication
+### Configuration
 
-There are 2 modes of authentication supported in the Xero MCP server:
+The server is single-tenant: it authenticates to one Xero organisation with a
+[Custom Connection](https://developer.xero.com/documentation/guides/oauth2/custom-connections/)
+(client credentials) and every request carries the configured tenant ID. All
+configuration is read from environment variables (a local `.env` file is
+loaded if present; see `.env.example`).
 
-#### 1. Custom Connections
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `XERO_CLIENT_ID` | yes | Custom Connection client ID |
+| `XERO_CLIENT_SECRET` | yes | Custom Connection client secret |
+| `XERO_TENANT_ID` | yes | The organisation every request targets. Never inferred from the first connection. |
+| `XERO_CONFIRMATION_SECRET` | yes | Keys (HMAC) the preview→confirm tokens used by draft mutations. Use a long random value. |
+| `XERO_CONFIRMATION_TTL_SECONDS` | no | Lifetime of a preview confirmation token, 1–3600 (default 600). |
+| `MCP_AUTH_TOKEN` | http mode | Shared secret HTTP clients must send as `Authorization: Bearer …` (minimum 32 characters). |
+| `MCP_BIND_HOST` | no | Interface the HTTP listener binds to (default `127.0.0.1`). |
+| `PORT` | no | HTTP port, 0–65535 (default 3000). |
+| `MCP_ALLOWED_HOSTS` | no | Comma-separated extra hostnames accepted in the HTTP `Host` header (loopback is always accepted). |
+| `MCP_ALLOWED_ORIGINS` | no | Comma-separated extra origins accepted in the HTTP `Origin` header (loopback is always accepted). |
+| `MCP_MAX_BODY_BYTES` | no | Largest accepted HTTP request body (default 1 MiB). |
 
-This is a better choice for testing and development which allows you to specify client id and secrets for a specific organisation.
-It is also the recommended approach if you are integrating this into 3rd party MCP clients such as Claude Desktop.
+Invalid values fail at startup with a message that names the variable but
+never echoes its value. Wildcards (`*`) are rejected in both allowlists.
 
-##### Configuring your Xero Developer account
+##### Required Xero scopes
 
-Set up a Custom Connection following these instructions: https://developer.xero.com/documentation/guides/oauth2/custom-connections/
+Add the scopes in [`CLIENT_CREDENTIAL_SCOPES`](src/xero/client.ts) to your
+Custom Connection. There is no `XERO_SCOPES` override.
 
-##### Required Scopes
+##### Integrating the MCP server with Claude Desktop (stdio)
 
-Custom connections require different scopes depending on when they were created. **All scopes in the relevant list must be added to your custom connection:**
-
-| Custom Connection Created | Required Scopes |
-|---------------------------|-----------------|
-| Before Apr 29, 2026 | [SCOPES_V1](src/clients/xero-client.ts#L82-L90) (bundled permissions) |
-| From Apr 29, 2026 | [SCOPES_V2](src/clients/xero-client.ts#L93-L112) (granular permissions) |
-
-> **Note:** The MCP server automatically tries V1 scopes first and falls back to V2 if needed.
-> 
-> You can override these by setting the `XERO_SCOPES` environment variable to a space-separated list of scopes.
-
-##### Integrating the MCP server with Claude Desktop
-
-To add the MCP server to Claude go to Settings > Developer > Edit config and add the following to your claude_desktop_config.json file:
+Go to Settings > Developer > Edit config and add the following to your
+`claude_desktop_config.json`:
 
 ```json
 {
@@ -73,121 +80,49 @@ To add the MCP server to Claude go to Settings > Developer > Edit config and add
       "env": {
         "XERO_CLIENT_ID": "your_client_id_here",
         "XERO_CLIENT_SECRET": "your_client_secret_here",
-        "XERO_SCOPES": "accounting.invoices accounting.contacts accounting.settings"
+        "XERO_TENANT_ID": "your_tenant_id_here",
+        "XERO_CONFIRMATION_SECRET": "a_long_random_value"
       }
     }
   }
 }
 ```
-
-The `XERO_SCOPES` variable is optional. If omitted, the default scopes listed above will be used.
 
 NOTE: If you are using [Node Version Manager](https://github.com/nvm-sh/nvm) `"command": "npx"` section change it to be the full path to the executable, ie: `your_home_directory/.nvm/versions/node/v22.14.0/bin/npx` on Mac / Linux or `"your_home_directory\\.nvm\\versions\\node\\v22.14.0\\bin\\npx"` on Windows
 
-#### 2. Bearer Token
+### HTTP mode
 
-This is a better choice if you are to support multiple Xero accounts at runtime and allow the MCP client to execute an auth flow (such as PKCE) as required.
-In this case, use the following configuration:
+`node dist/index.js http` serves MCP `2026-07-28` over stateless Streamable
+HTTP at `POST /mcp`. Before relying on it, understand what protects it:
 
-```json
-{
-  "mcpServers": {
-    "xero": {
-      "command": "npx",
-      "args": ["-y", "@xeroapi/xero-mcp-server@latest"],
-      "env": {
-        "XERO_CLIENT_BEARER_TOKEN": "your_bearer_token"
-      }
-    }
-  }
-}
-```
+- **Authentication is required.** Every request must carry
+  `Authorization: Bearer <MCP_AUTH_TOKEN>`; anything else receives `401` with a
+  `WWW-Authenticate` challenge before any body byte is read.
+- **Loopback by default.** The listener binds `127.0.0.1`. Set
+  `MCP_BIND_HOST` only when you intend other machines to reach it, and put TLS
+  in front (the server speaks plain HTTP).
+- **Host / Origin validation is DNS-rebinding protection, not authentication.**
+  A direct client can send any `Host` header it likes; the bearer token is what
+  keeps strangers out. `MCP_ALLOWED_HOSTS` and `MCP_ALLOWED_ORIGINS` are
+  separate lists — granting a browser origin never widens the `Host` allowlist.
+- **Bodies are capped** at `MCP_MAX_BODY_BYTES`; larger requests receive `413`.
+- The startup line `xero-mcp http listening on http://…/mcp` is written to
+  stderr. Nothing is ever written to stdout in HTTP mode.
 
-NOTE: The `XERO_CLIENT_BEARER_TOKEN` will take precedence over the `XERO_CLIENT_ID` if defined.
+Legacy (2025-era) MCP traffic — `initialize`, `Mcp-Session-Id`, `GET` SSE
+streams — is rejected.
 
-##### Required Scopes for Bearer Token
+### Available MCP tools
 
-When obtaining a bearer token, you must request the appropriate scopes. The scopes you request should be:
+The modernisation is in progress. The served tool catalogue is asserted by
+[`src/mcp/server.test.ts`](src/mcp/server.test.ts) and is currently **empty**:
+the read tools under `src/tools/list` and `src/tools/get` are being ported
+behind the new result boundary, and the draft-only mutation tools
+(preview → confirm → apply for invoices, credit notes, quotes, purchase orders
+and manual journals) will be registered once that boundary exists.
 
-> **Note:** Some scopes are being deprecated in favour of more granular scopes. See the [Xero OAuth 2.0 Scopes documentation](https://developer.xero.com/documentation/guides/oauth2/scopes/) for details on deprecation timelines.
-
-```
-accounting.transactions (Deprecated)
-accounting.transactions.read (Deprecated)
-accounting.invoices
-accounting.invoices.read
-accounting.payments
-accounting.payments.read
-accounting.banktransactions
-accounting.banktransactions.read
-accounting.manualjournals
-accounting.manualjournals.read
-accounting.reports.read (Deprecated)
-accounting.reports.aged.read
-accounting.reports.balancesheet.read
-accounting.reports.profitandloss.read
-accounting.reports.trialbalance.read
-accounting.contacts 
-accounting.settings 
-payroll.settings 
-payroll.employees 
-payroll.timesheets
-```
-
-
-### Available MCP Commands
-
-- `list-accounts`: Retrieve a list of accounts
-- `list-contacts`: Retrieve a list of contacts from Xero
-- `list-credit-notes`: Retrieve a list of credit notes
-- `list-invoices`: Retrieve a list of invoices
-- `list-items`: Retrieve a list of items
-- `list-manual-journals`: Retrieve a list of manual journals
-- `list-organisation-details`: Retrieve details about an organisation
-- `list-profit-and-loss`: Retrieve a profit and loss report
-- `list-quotes`: Retrieve a list of quotes
-- `list-tax-rates`: Retrieve a list of tax rates
-- `list-payments`: Retrieve a list of payments
-- `list-trial-balance`: Retrieve a trial balance report
-- `list-bank-transactions`: Retrieve a list of bank account transactions
-- `list-payroll-employees`: Retrieve a list of Payroll Employees
-- `list-report-balance-sheet`: Retrieve a balance sheet report
-- `list-payroll-employee-leave`: Retrieve a Payroll Employee's leave records
-- `list-payroll-employee-leave-balances`: Retrieve a Payroll Employee's leave balances
-- `list-payroll-employee-leave-types`: Retrieve a list of Payroll leave types
-- `list-payroll-leave-periods`: Retrieve a list of a Payroll Employee's leave periods
-- `list-payroll-leave-types`: Retrieve a list of all available leave types in Xero Payroll
-- `list-timesheets`: Retrieve a list of Payroll Timesheets
-- `list-aged-receivables-by-contact`: Retrieves aged receivables for a contact
-- `list-aged-payables-by-contact`: Retrieves aged payables for a contact
-- `list-contact-groups`: Retrieve a list of contact groups
-- `list-tracking-categories`: Retrieve a list of tracking categories
-- `create-bank-transaction`: Create a new bank transaction
-- `create-contact`: Create a new contact
-- `create-credit-note`: Create a new credit note
-- `create-invoice`: Create a new invoice
-- `create-item`: Create a new item
-- `create-manual-journal`: Create a new manual journal
-- `create-payment`: Create a new payment
-- `create-quote`: Create a new quote
-- `create-payroll-timesheet`: Create a new Payroll Timesheet
-- `create-tracking-category`: Create a new tracking category
-- `create-tracking-option`: Create a new tracking option
-- `update-bank-transaction`: Update an existing bank transaction
-- `update-contact`: Update an existing contact
-- `update-invoice`: Update an existing draft invoice
-- `update-item`: Update an existing item
-- `update-manual-journal`: Update an existing manual journal
-- `update-quote`: Update an existing draft quote
-- `update-credit-note`: Update an existing draft credit note
-- `update-tracking-category`: Update an existing tracking category
-- `update-tracking-options`: Update tracking options
-- `update-payroll-timesheet-line`: Update a line on an existing Payroll Timesheet
-- `approve-payroll-timesheet`: Approve a Payroll Timesheet
-- `revert-payroll-timesheet`: Revert an approved Payroll Timesheet
-- `add-payroll-timesheet-line`: Add new line on an existing Payroll Timesheet
-- `delete-payroll-timesheet`: Delete an existing Payroll Timesheet
-- `get-payroll-timesheet`: Retrieve an existing Payroll Timesheet
+No tool will ever create, approve, pay, send, void or otherwise transition a
+Xero record beyond `DRAFT`; the former direct-write tools have been removed.
 
 For detailed API documentation, please refer to the [MCP Protocol Specification](https://modelcontextprotocol.io/).
 
@@ -213,14 +148,17 @@ npm run build
 pnpm build
 ```
 
-### Future development commands
-
-The following commands are planned for the modernised server and are not
-available until the HTTP transport work in Task 3 is complete:
+### Run the server
 
 ```bash
-npm run dev -- stdio
-npm run dev -- http
+npm run dev -- stdio   # or: node dist/index.js
+npm run dev -- http    # requires MCP_AUTH_TOKEN; see "HTTP mode"
+```
+
+### Release gate
+
+```bash
+npm run typecheck && npm run lint && npm run build && npm test && npm run test:eval
 ```
 
 ### Integrating with Claude Desktop
@@ -237,7 +175,9 @@ NOTE: For Windows ensure the `args` path escapes the `\` between folders ie. `"C
       "args": ["insert-your-file-path-here/xero-mcp-server/dist/index.js"],
       "env": {
         "XERO_CLIENT_ID": "your_client_id_here",
-        "XERO_CLIENT_SECRET": "your_client_secret_here"
+        "XERO_CLIENT_SECRET": "your_client_secret_here",
+        "XERO_TENANT_ID": "your_tenant_id_here",
+        "XERO_CONFIRMATION_SECRET": "a_long_random_value"
       }
     }
   }
@@ -250,4 +190,17 @@ MIT
 
 ## Security
 
-Please do not commit your `.env` file or any sensitive credentials to version control (it is included in `.gitignore` as a safe default.)
+- Never commit your `.env` file or any credentials (it is in `.gitignore`).
+- Xero tokens, client secrets and `Authorization` headers are never written to
+  tool output or logs; error text passes through a redaction layer.
+- Xero mutations are draft-only and require a preview confirmation token that
+  is single-use, HMAC-keyed with `XERO_CONFIRMATION_SECRET`, bound to the
+  operation/payload/target version, and expires after
+  `XERO_CONFIRMATION_TTL_SECONDS`.
+- HTTP mode requires `MCP_AUTH_TOKEN` and binds loopback by default; see
+  "HTTP mode" above before exposing it anywhere.
+- Every read-tool input is validated (UUIDs, bounded pages, `YYYY-MM-DD`
+  dates, quote-free filter text) before it reaches a Xero query.
+
+The latest review and the tests that back each item:
+[`docs/security-review-2026-08-22.md`](docs/security-review-2026-08-22.md).

@@ -15,13 +15,13 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc && shx chmod +x dist/*.js",
+    "build": "shx rm -rf dist && tsc -p tsconfig.build.json && shx chmod +x dist/*.js",
     "dev": "tsx src/index.ts",
     "prepare": "npm run build",
     "watch": "tsc --watch",
     "test": "vitest run",
     "test:unit": "vitest run",
-    "test:eval": "vitest run src/evals",
+    "test:eval": "vitest run src/evals --passWithNoTests",
     "typecheck": "tsc --noEmit",
     "test:watch": "vitest",
     "lint:fix": "eslint --fix",
@@ -31,8 +31,8 @@
     "@modelcontextprotocol/client": "^2.0.0",
     "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
+    "axios": "^1.15.0",
     "dotenv": "^16.4.7",
-    "openid-client": "^6.8.1",
     "xero-node": "^13.3.0",
     "zod": "3.25"
   },

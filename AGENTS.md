@@ -29,7 +29,10 @@ npm run typecheck && npm run lint && npm run build && npm test && npm run test:e
 
 ## Safety rules
 
-- Never log Xero tokens, client secrets, or complete authorization headers.
+- Never log Xero tokens, client secrets, or complete authorization headers; route every error message through `redactErrorMessage` / `formatError`.
+- HTTP mode requires `MCP_AUTH_TOKEN` and binds loopback by default. Never bind a non-loopback interface without the token, and never treat Host/Origin validation as authentication.
+- Build `ServerDependencies` once in `main()` and hand the same object to every per-request server; never construct a `ConfirmationStore` or `DraftCommandService` inside the server factory.
+- Read-tool inputs use the shared constrained schemas in `src/tools/schemas.ts`; never interpolate caller values into a Xero `where` filter except through `src/helpers/xero-where.ts`.
 - Use the injected `XeroApi` boundary; do not add module-global Xero clients to new code.
 - Xero mutations are draft-only and must flow through preview → single-use confirmation → apply. No direct write tool is permitted.
 - Always re-fetch update/delete targets and reject any status other than `DRAFT` before a mutation call.
