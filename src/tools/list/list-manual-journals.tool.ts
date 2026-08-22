@@ -60,21 +60,25 @@ If they want the next page, call this tool again with the next page number, modi
               : "No description",
             journal.date ? `Date: ${journal.date}` : null,
             journal.journalLines
-              ? journal.journalLines.map((line) =>
-                  [
-                    `Line Amount: ${line.lineAmount}`,
-                    line.accountCode
-                      ? `Account Code: ${line.accountCode}`
-                      : "No account code",
-                    line.description
-                      ? `Description: ${line.description}`
-                      : "No description",
-                    line.taxType ? `Tax Type: ${line.taxType}` : "No tax type",
-                    `Tax Amount: ${line.taxAmount}`,
-                  ]
-                    .filter(Boolean)
-                    .join("\n")
-                ).join("\n\n")
+              ? journal.journalLines
+                  .map((line) =>
+                    [
+                      `Line Amount: ${line.lineAmount}`,
+                      line.accountCode
+                        ? `Account Code: ${line.accountCode}`
+                        : "No account code",
+                      line.description
+                        ? `Description: ${line.description}`
+                        : "No description",
+                      line.taxType
+                        ? `Tax Type: ${line.taxType}`
+                        : "No tax type",
+                      `Tax Amount: ${line.taxAmount}`,
+                    ]
+                      .filter(Boolean)
+                      .join("\n"),
+                  )
+                  .join("\n\n")
               : "No journal lines",
             journal.lineAmountTypes
               ? `Line Amount Types: ${journal.lineAmountTypes}`

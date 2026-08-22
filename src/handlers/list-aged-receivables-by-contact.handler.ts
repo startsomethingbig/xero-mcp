@@ -8,18 +8,19 @@ async function listAgedReceivablesByContact(
   contactId: string,
   reportDate?: string,
   invoicesFromDate?: string,
-  invoicesToDate?: string
+  invoicesToDate?: string,
 ): Promise<ReportWithRow | undefined> {
   await xeroClient.authenticate();
 
-  const response = await xeroClient.accountingApi.getReportAgedReceivablesByContact(
-    xeroClient.tenantId, // xeroTenantId
-    contactId, // contactId
-    reportDate, // date
-    invoicesFromDate, // fromDate
-    invoicesToDate, // toDate
-    getClientHeaders()
-  );
+  const response =
+    await xeroClient.accountingApi.getReportAgedReceivablesByContact(
+      xeroClient.tenantId, // xeroTenantId
+      contactId, // contactId
+      reportDate, // date
+      invoicesFromDate, // fromDate
+      invoicesToDate, // toDate
+      getClientHeaders(),
+    );
 
   return response.body.reports?.[0];
 }
@@ -28,23 +29,28 @@ export async function listXeroAgedReceivablesByContact(
   contactId: string,
   reportDate?: string,
   invoicesFromDate?: string,
-  invoicesToDate?: string
+  invoicesToDate?: string,
 ): Promise<XeroClientResponse<ReportWithRow>> {
   try {
-    const agedReceivables = await listAgedReceivablesByContact(contactId, reportDate, invoicesFromDate, invoicesToDate);
+    const agedReceivables = await listAgedReceivablesByContact(
+      contactId,
+      reportDate,
+      invoicesFromDate,
+      invoicesToDate,
+    );
 
     if (!agedReceivables) {
       return {
         result: null,
         isError: true,
-        error: "Failed to get aged receivables by contact from Xero."
+        error: "Failed to get aged receivables by contact from Xero.",
       };
     }
 
     return {
       result: agedReceivables,
       isError: false,
-      error: null
+      error: null,
     };
   } catch (error) {
     return {

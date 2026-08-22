@@ -37,16 +37,34 @@ const ListItemsTool = CreateXeroTool(
             `ID: ${item.itemID}`,
             `Code: ${item.code}`,
             item.description ? `Description: ${item.description}` : null,
-            item.purchaseDescription ? `Purchase Description: ${item.purchaseDescription}` : null,
-            item.salesDetails?.unitPrice !== undefined ? `Sales Price: ${item.salesDetails.unitPrice}` : null,
-            item.purchaseDetails?.unitPrice !== undefined ? `Purchase Price: ${item.purchaseDetails.unitPrice}` : null,
-            item.salesDetails?.accountCode ? `Sales Account: ${item.salesDetails.accountCode}` : null,
-            item.purchaseDetails?.accountCode ? `Purchase Account: ${item.purchaseDetails.accountCode}` : null,
-            item.isTrackedAsInventory !== undefined ? `Tracked as Inventory: ${item.isTrackedAsInventory ? 'Yes' : 'No'}` : null,
-            item.isSold !== undefined ? `Is Sold: ${item.isSold ? 'Yes' : 'No'}` : null,
-            item.isPurchased !== undefined ? `Is Purchased: ${item.isPurchased ? 'Yes' : 'No'}` : null,
+            item.purchaseDescription
+              ? `Purchase Description: ${item.purchaseDescription}`
+              : null,
+            item.salesDetails?.unitPrice !== undefined
+              ? `Sales Price: ${item.salesDetails.unitPrice}`
+              : null,
+            item.purchaseDetails?.unitPrice !== undefined
+              ? `Purchase Price: ${item.purchaseDetails.unitPrice}`
+              : null,
+            item.salesDetails?.accountCode
+              ? `Sales Account: ${item.salesDetails.accountCode}`
+              : null,
+            item.purchaseDetails?.accountCode
+              ? `Purchase Account: ${item.purchaseDetails.accountCode}`
+              : null,
+            item.isTrackedAsInventory !== undefined
+              ? `Tracked as Inventory: ${item.isTrackedAsInventory ? "Yes" : "No"}`
+              : null,
+            item.isSold !== undefined
+              ? `Is Sold: ${item.isSold ? "Yes" : "No"}`
+              : null,
+            item.isPurchased !== undefined
+              ? `Is Purchased: ${item.isPurchased ? "Yes" : "No"}`
+              : null,
             item.updatedDateUTC ? `Last Updated: ${item.updatedDateUTC}` : null,
-            item.validationErrors?.length ? `Validation Errors: ${item.validationErrors.map(e => e.message).join(", ")}` : null,
+            item.validationErrors?.length
+              ? `Validation Errors: ${item.validationErrors.map((e) => e.message).join(", ")}`
+              : null,
           ]
             .filter(Boolean)
             .join("\n"),
@@ -56,4 +74,4 @@ const ListItemsTool = CreateXeroTool(
   },
 );
 
-export default ListItemsTool; 
+export default ListItemsTool;

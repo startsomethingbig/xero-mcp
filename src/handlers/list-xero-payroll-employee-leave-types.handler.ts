@@ -7,7 +7,9 @@ import { EmployeeLeaveType } from "../types/payroll-nz-types.js";
 /**
  * Internal function to fetch employee leave types from Xero
  */
-async function fetchEmployeeLeaveTypes(employeeId: string): Promise<EmployeeLeaveType[] | null> {
+async function fetchEmployeeLeaveTypes(
+  employeeId: string,
+): Promise<EmployeeLeaveType[] | null> {
   await xeroClient.authenticate();
 
   if (!employeeId) {

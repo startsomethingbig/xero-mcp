@@ -14,7 +14,7 @@ const ListBankTransactionsTool = CreateXeroTool(
   if one was provided in the provided in the previous call.`,
   {
     page: z.number(),
-    bankAccountId: z.string().optional()
+    bankAccountId: z.string().optional(),
   },
   async ({ bankAccountId, page }) => {
     const response = await listXeroBankTransactions(page, bankAccountId);
@@ -23,9 +23,9 @@ const ListBankTransactionsTool = CreateXeroTool(
         content: [
           {
             type: "text" as const,
-            text: `Error listing bank transactions: ${response.error}`
-          }
-        ]
+            text: `Error listing bank transactions: ${response.error}`,
+          },
+        ],
       };
     }
 
@@ -35,7 +35,7 @@ const ListBankTransactionsTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Found ${bankTransactions?.length || 0} bank transactions:`
+          text: `Found ${bankTransactions?.length || 0} bank transactions:`,
         },
         ...(bankTransactions?.map((transaction) => ({
           type: "text" as const,
@@ -45,24 +45,36 @@ const ListBankTransactionsTool = CreateXeroTool(
             transaction.contact
               ? `Contact: ${transaction.contact.name} (${transaction.contact.contactID})`
               : null,
-            transaction.reference ? `Reference: ${transaction.reference}` : null,
+            transaction.reference
+              ? `Reference: ${transaction.reference}`
+              : null,
             transaction.date ? `Date: ${transaction.date}` : null,
             transaction.subTotal ? `Sub Total: ${transaction.subTotal}` : null,
             transaction.totalTax ? `Total Tax: ${transaction.totalTax}` : null,
             transaction.total ? `Total: ${transaction.total}` : null,
-            transaction.isReconciled !== undefined ? (`${transaction.isReconciled ? "Reconciled" : "Unreconciled"}`) : null,
-            transaction.currencyCode ? `Currency Code: ${transaction.currencyCode}` : null,
+            transaction.isReconciled !== undefined
+              ? `${transaction.isReconciled ? "Reconciled" : "Unreconciled"}`
+              : null,
+            transaction.currencyCode
+              ? `Currency Code: ${transaction.currencyCode}`
+              : null,
             `${transaction.status || "Unknown"}`,
-            transaction.lineAmountTypes ? `Line Amount Types: ${transaction.lineAmountTypes}` : undefined,
+            transaction.lineAmountTypes
+              ? `Line Amount Types: ${transaction.lineAmountTypes}`
+              : undefined,
             transaction.hasAttachments !== undefined
-              ? (transaction.hasAttachments ? "Has attachments" : "Does not have attachments")
+              ? transaction.hasAttachments
+                ? "Has attachments"
+                : "Does not have attachments"
               : null,
             `Line Items: ${transaction.lineItems?.map(formatLineItem)}`,
-          ].filter(Boolean).join("\n")
-        })) || [])
-      ]
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        })) || []),
+      ],
     };
-  }
+  },
 );
 
 export default ListBankTransactionsTool;

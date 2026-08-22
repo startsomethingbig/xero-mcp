@@ -10,14 +10,17 @@ async function getBankTransactions(
 ): Promise<BankTransaction[]> {
   await xeroClient.authenticate();
 
-  const response = await xeroClient.accountingApi.getBankTransactions(xeroClient.tenantId,
-      undefined, // ifModifiedSince
-      bankAccountId ? `BankAccount.AccountID=guid("${bankAccountId}")` : undefined, // where
-      "Date DESC", // order
-      page, // page
-      undefined, // unitdp
-      10, // pagesize
-      getClientHeaders()
+  const response = await xeroClient.accountingApi.getBankTransactions(
+    xeroClient.tenantId,
+    undefined, // ifModifiedSince
+    bankAccountId
+      ? `BankAccount.AccountID=guid("${bankAccountId}")`
+      : undefined, // where
+    "Date DESC", // order
+    page, // page
+    undefined, // unitdp
+    10, // pagesize
+    getClientHeaders(),
   );
 
   return response.body.bankTransactions ?? [];
@@ -25,7 +28,7 @@ async function getBankTransactions(
 
 export async function listXeroBankTransactions(
   page: number = 1,
-  bankAccountId?: string
+  bankAccountId?: string,
 ): Promise<XeroClientResponse<BankTransaction[]>> {
   try {
     const bankTransactions = await getBankTransactions(page, bankAccountId);
@@ -33,13 +36,13 @@ export async function listXeroBankTransactions(
     return {
       result: bankTransactions,
       isError: false,
-      error: null
-    }
+      error: null,
+    };
   } catch (error) {
     return {
       result: null,
       isError: true,
-      error: formatError(error)
-    }
+      error: formatError(error),
+    };
   }
 }

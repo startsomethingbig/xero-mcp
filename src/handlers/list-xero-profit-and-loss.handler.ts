@@ -88,4 +88,4 @@ export async function listXeroProfitAndLoss(
       error: formatError(error),
     };
   }
-} 
+}

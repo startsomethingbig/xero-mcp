@@ -19,9 +19,9 @@ async function getTimesheet(timesheetID: string): Promise<Timesheet | null> {
 /**
  * Get a single payroll timesheet from Xero
  */
-export async function getXeroPayrollTimesheet(timesheetID: string): Promise<
-  XeroClientResponse<Timesheet | null>
-> {
+export async function getXeroPayrollTimesheet(
+  timesheetID: string,
+): Promise<XeroClientResponse<Timesheet | null>> {
   try {
     const timesheet = await getTimesheet(timesheetID);
 

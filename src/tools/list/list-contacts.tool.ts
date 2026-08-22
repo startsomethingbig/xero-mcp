@@ -6,10 +6,17 @@ const ListContactsTool = CreateXeroTool(
   "list-contacts",
   "List all contacts in Xero. This includes Suppliers and Customers.",
   {
-    page: z.number().optional().describe("Optional page number to retrieve for pagination. \
+    page: z.number().optional().describe(
+      "Optional page number to retrieve for pagination. \
       If not provided, the first page will be returned. If 100 contacts are returned, \
-      call this tool again with the next page number."),
-    searchTerm: z.string().optional().describe("Search parameter that performs a case-insensitive text search across the Name, FirstName, LastName, ContactNumber and EmailAddress fields"),
+      call this tool again with the next page number.",
+    ),
+    searchTerm: z
+      .string()
+      .optional()
+      .describe(
+        "Search parameter that performs a case-insensitive text search across the Name, FirstName, LastName, ContactNumber and EmailAddress fields",
+      ),
   },
   async (params) => {
     const { page, searchTerm } = params;
@@ -32,7 +39,7 @@ const ListContactsTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Found ${contacts?.length || 0} contacts${page ? ` (page ${page})` : ''}:`,
+          text: `Found ${contacts?.length || 0} contacts${page ? ` (page ${page})` : ""}:`,
         },
         ...(contacts?.map((contact) => ({
           type: "text" as const,

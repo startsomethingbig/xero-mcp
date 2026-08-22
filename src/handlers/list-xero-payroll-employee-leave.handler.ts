@@ -12,7 +12,9 @@ interface FetchEmployeeLeaveParams {
 /**
  * Internal function to fetch employee leave from Xero
  */
-async function fetchEmployeeLeave({ employeeId }: FetchEmployeeLeaveParams): Promise<EmployeeLeave[] | null> {
+async function fetchEmployeeLeave({
+  employeeId,
+}: FetchEmployeeLeaveParams): Promise<EmployeeLeave[] | null> {
   await xeroClient.authenticate();
 
   if (!employeeId) {
@@ -23,8 +25,8 @@ async function fetchEmployeeLeave({ employeeId }: FetchEmployeeLeaveParams): Pro
     xeroClient.tenantId,
     employeeId,
     {
-      headers: getClientHeaders().headers
-    }
+      headers: getClientHeaders().headers,
+    },
   );
 
   return response.body.leave ?? null;

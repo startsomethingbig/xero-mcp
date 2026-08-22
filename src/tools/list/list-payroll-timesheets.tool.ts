@@ -1,8 +1,6 @@
 import { Timesheet } from "xero-node/dist/gen/model/payroll-nz/timesheet.js";
 
-import {
-  listXeroPayrollTimesheets,
-} from "../../handlers/list-xero-timesheets.handler.js";
+import { listXeroPayrollTimesheets } from "../../handlers/list-xero-timesheets.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 
 const ListPayrollTimesheetsTool = CreateXeroTool(

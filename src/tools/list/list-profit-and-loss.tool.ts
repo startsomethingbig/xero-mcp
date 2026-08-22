@@ -6,12 +6,30 @@ const ListProfitAndLossTool = CreateXeroTool(
   "list-profit-and-loss",
   "Lists profit and loss report in Xero. This provides a summary of revenue, expenses, and profit or loss over a specified period of time.",
   {
-    fromDate: z.string().optional().describe("Optional start date in YYYY-MM-DD format"),
-    toDate: z.string().optional().describe("Optional end date in YYYY-MM-DD format"),
-    periods: z.number().optional().describe("Optional number of periods to compare"),
-    timeframe: z.enum(["MONTH", "QUARTER", "YEAR"]).optional().describe("Optional timeframe for the report (MONTH, QUARTER, YEAR)"),
-    standardLayout: z.boolean().optional().describe("Optional flag to use standard layout"),
-    paymentsOnly: z.boolean().optional().describe("Optional flag to include only accounts with payments"),
+    fromDate: z
+      .string()
+      .optional()
+      .describe("Optional start date in YYYY-MM-DD format"),
+    toDate: z
+      .string()
+      .optional()
+      .describe("Optional end date in YYYY-MM-DD format"),
+    periods: z
+      .number()
+      .optional()
+      .describe("Optional number of periods to compare"),
+    timeframe: z
+      .enum(["MONTH", "QUARTER", "YEAR"])
+      .optional()
+      .describe("Optional timeframe for the report (MONTH, QUARTER, YEAR)"),
+    standardLayout: z
+      .boolean()
+      .optional()
+      .describe("Optional flag to use standard layout"),
+    paymentsOnly: z
+      .boolean()
+      .optional()
+      .describe("Optional flag to include only accounts with payments"),
   },
   async (args) => {
     const response = await listXeroProfitAndLoss(
@@ -40,11 +58,11 @@ const ListProfitAndLossTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-         text: `Profit and Loss Report: ${profitAndLossReport?.reportName ?? "Unnamed"}`,
-       },
-       {
-         type: "text" as const,
-         text: `Date Range: ${profitAndLossReport?.reportDate ?? "Not specified"}`,
+          text: `Profit and Loss Report: ${profitAndLossReport?.reportName ?? "Unnamed"}`,
+        },
+        {
+          type: "text" as const,
+          text: `Date Range: ${profitAndLossReport?.reportDate ?? "Not specified"}`,
         },
         {
           type: "text" as const,
@@ -59,4 +77,4 @@ const ListProfitAndLossTool = CreateXeroTool(
   },
 );
 
-export default ListProfitAndLossTool; 
+export default ListProfitAndLossTool;

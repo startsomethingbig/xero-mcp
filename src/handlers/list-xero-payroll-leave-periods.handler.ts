@@ -21,7 +21,7 @@ async function fetchLeavePeriods({
 
   if (!employeeId) {
     throw new Error("Employee ID is required to fetch leave periods");
-  }  // After reviewing the SDK documentation, it appears this API call requires different parameters
+  } // After reviewing the SDK documentation, it appears this API call requires different parameters
   // Use parameters that match the SDK's expectations
   const response = await xeroClient.payrollNZApi.getEmployeeLeavePeriods(
     xeroClient.tenantId,

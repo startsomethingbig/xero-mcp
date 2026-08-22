@@ -7,7 +7,9 @@ const ListPayrollEmployeeLeaveTool = CreateXeroTool(
   "list-payroll-employee-leave",
   "List all leave records for a specific employee in Xero. This shows all leave transactions including approved, pending, and processed time off. Provide an employee ID to see their leave history.",
   {
-    employeeId: z.string().describe("The Xero employee ID to fetch leave records for"),
+    employeeId: z
+      .string()
+      .describe("The Xero employee ID to fetch leave records for"),
   },
   async ({ employeeId }) => {
     const response = await listXeroPayrollEmployeeLeave(employeeId);
@@ -38,8 +40,12 @@ const ListPayrollEmployeeLeaveTool = CreateXeroTool(
             `Description: ${leaveItem.description || "No description"}`,
             leaveItem.startDate ? `Start Date: ${leaveItem.startDate}` : null,
             leaveItem.endDate ? `End Date: ${leaveItem.endDate}` : null,
-            leaveItem.periods ? `Periods: ${leaveItem.periods.length || 0}` : null,
-            leaveItem.updatedDateUTC ? `Last Updated: ${leaveItem.updatedDateUTC}` : null,
+            leaveItem.periods
+              ? `Periods: ${leaveItem.periods.length || 0}`
+              : null,
+            leaveItem.updatedDateUTC
+              ? `Last Updated: ${leaveItem.updatedDateUTC}`
+              : null,
           ]
             .filter(Boolean)
             .join("\n"),

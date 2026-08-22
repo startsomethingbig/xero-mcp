@@ -26,17 +26,30 @@ const ListPayrollLeaveTypesTool = CreateXeroTool(
         {
           type: "text" as const,
           text: `Found ${leaveTypes?.length || 0} payroll leave types:`,
-        },        ...(leaveTypes?.map((leaveType: LeaveType) => ({
+        },
+        ...(leaveTypes?.map((leaveType: LeaveType) => ({
           type: "text" as const,
           text: [
             `Leave Type: ${leaveType.name || "Unnamed"}`,
             `Leave Type ID: ${leaveType.leaveTypeID || "Unknown"}`,
-            leaveType.isPaidLeave !== undefined ? `Is Paid Leave: ${leaveType.isPaidLeave ? 'Yes' : 'No'}` : null,
-            leaveType.showOnPayslip !== undefined ? `Show On Payslip: ${leaveType.showOnPayslip ? 'Yes' : 'No'}` : null,
-            leaveType.isActive !== undefined ? `Is Active: ${leaveType.isActive ? 'Yes' : 'No'}` : null,
-            leaveType.typeOfUnits ? `Type Of Units: ${leaveType.typeOfUnits}` : null,
-            leaveType.typeOfUnitsToAccrue ? `Type Of Units To Accrue: ${leaveType.typeOfUnitsToAccrue}` : null,
-            leaveType.updatedDateUTC ? `Last Updated: ${leaveType.updatedDateUTC}` : null,
+            leaveType.isPaidLeave !== undefined
+              ? `Is Paid Leave: ${leaveType.isPaidLeave ? "Yes" : "No"}`
+              : null,
+            leaveType.showOnPayslip !== undefined
+              ? `Show On Payslip: ${leaveType.showOnPayslip ? "Yes" : "No"}`
+              : null,
+            leaveType.isActive !== undefined
+              ? `Is Active: ${leaveType.isActive ? "Yes" : "No"}`
+              : null,
+            leaveType.typeOfUnits
+              ? `Type Of Units: ${leaveType.typeOfUnits}`
+              : null,
+            leaveType.typeOfUnitsToAccrue
+              ? `Type Of Units To Accrue: ${leaveType.typeOfUnitsToAccrue}`
+              : null,
+            leaveType.updatedDateUTC
+              ? `Last Updated: ${leaveType.updatedDateUTC}`
+              : null,
           ]
             .filter(Boolean)
             .join("\n"),

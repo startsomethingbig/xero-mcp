@@ -1,8 +1,6 @@
 import { z } from "zod";
 
-import {
-  getXeroPayrollTimesheet,
-} from "../../handlers/get-xero-payroll-timesheet.handler.js";
+import { getXeroPayrollTimesheet } from "../../handlers/get-xero-payroll-timesheet.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 
 const GetPayrollTimesheetTool = CreateXeroTool(

@@ -7,12 +7,24 @@ const ListPayrollLeavePeriodsToolTool = CreateXeroTool(
   "list-payroll-leave-periods",
   "List all leave periods for a specific employee in Xero. This shows detailed time off periods including start and end dates, period status, payment dates, and leave types. Provide an employee ID to see their leave periods.",
   {
-    employeeId: z.string().describe("The Xero employee ID to fetch leave periods for"),
-    startDate: z.string().optional().describe("Optional start date in YYYY-MM-DD format"),
-    endDate: z.string().optional().describe("Optional end date in YYYY-MM-DD format"),
+    employeeId: z
+      .string()
+      .describe("The Xero employee ID to fetch leave periods for"),
+    startDate: z
+      .string()
+      .optional()
+      .describe("Optional start date in YYYY-MM-DD format"),
+    endDate: z
+      .string()
+      .optional()
+      .describe("Optional end date in YYYY-MM-DD format"),
   },
   async ({ employeeId, startDate, endDate }) => {
-    const response = await listXeroPayrollLeavePeriods(employeeId, startDate, endDate);
+    const response = await listXeroPayrollLeavePeriods(
+      employeeId,
+      startDate,
+      endDate,
+    );
     if (response.isError) {
       return {
         content: [
@@ -36,13 +48,23 @@ const ListPayrollLeavePeriodsToolTool = CreateXeroTool(
           type: "text" as const,
           text: [
             `Period Status: ${period.periodStatus || "Unknown"}`,
-            period.periodStartDate ? `Start Date: ${period.periodStartDate}` : null,
+            period.periodStartDate
+              ? `Start Date: ${period.periodStartDate}`
+              : null,
             period.periodEndDate ? `End Date: ${period.periodEndDate}` : null,
-            period.numberOfUnits ? `Number of Units: ${period.numberOfUnits}` : null,
-            period.numberOfUnitsTaken ? `Payment Date: ${period.numberOfUnitsTaken}` : null,
+            period.numberOfUnits
+              ? `Number of Units: ${period.numberOfUnits}`
+              : null,
+            period.numberOfUnitsTaken
+              ? `Payment Date: ${period.numberOfUnitsTaken}`
+              : null,
             period.typeOfUnits ? `Payment Date: ${period.typeOfUnits}` : null,
-            period.typeOfUnitsTaken ? `Payment Date: ${period.typeOfUnitsTaken}` : null,
-            period.periodStatus ? `Period Status: ${period.periodStatus}` : null,
+            period.typeOfUnitsTaken
+              ? `Payment Date: ${period.typeOfUnitsTaken}`
+              : null,
+            period.periodStatus
+              ? `Period Status: ${period.periodStatus}`
+              : null,
           ]
             .filter(Boolean)
             .join("\n"),

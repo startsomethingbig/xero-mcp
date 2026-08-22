@@ -55,4 +55,4 @@ export async function listXeroTrialBalance(
       error: formatError(error),
     };
   }
-} 
+}
