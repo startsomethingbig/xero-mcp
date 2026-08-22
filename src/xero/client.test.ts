@@ -370,4 +370,76 @@ describe("legacy Xero client compatibility", () => {
       "Failed to get Organisation short code: Xero request failed",
     );
   });
+
+  it.each([
+    "constructor",
+    "__proto__",
+    "toString",
+    "valueOf",
+    "hasOwnProperty",
+  ])(
+    "treats the prototype key %s as an unsupported resource without contacting Xero",
+    async (resource) => {
+      const sdk = fakeSdkForDraftResources();
+      const api = createXeroApi(environment, sdk);
+
+      await expect(api.get(resource, "x")).rejects.toBeInstanceOf(
+        UnsupportedDraftResourceError,
+      );
+      await expect(api.delete(resource, "x")).rejects.toBeInstanceOf(
+        UnsupportedDraftResourceError,
+      );
+      expect(sdk.getClientCredentialsToken).not.toHaveBeenCalled();
+    },
+  );
+
+  it("refuses to create or update anything that is not explicitly DRAFT", async () => {
+    const sdk = fakeSdkForDraftResources();
+    const api = createXeroApi(environment, sdk);
+
+    await expect(
+      api.create("invoice", { status: "AUTHORISED" }, "idem"),
+    ).rejects.toMatchObject({ code: "NOT_DRAFT" });
+    await expect(api.create("invoice", {}, "idem")).rejects.toMatchObject({
+      code: "NOT_DRAFT",
+    });
+    await expect(
+      api.update("invoice", "invoice-1", { status: "SUBMITTED" }),
+    ).rejects.toMatchObject({ code: "NOT_DRAFT" });
+
+    expect(sdk.accountingApi.createInvoices).not.toHaveBeenCalled();
+    expect(sdk.accountingApi.updateInvoice).not.toHaveBeenCalled();
+  });
+
+  it("reuses a client-credentials token until it is about to expire", async () => {
+    let now = Date.parse("2026-08-09T00:00:00.000Z");
+    const sdk = fakeSdkForDraftResources();
+    sdk.getClientCredentialsToken.mockResolvedValue({
+      access_token: "access-token",
+      expires_in: 1800,
+    });
+    const api = createXeroApi(environment, sdk, { now: () => now });
+
+    await Promise.all([api.get("invoice", "a"), api.get("invoice", "b")]);
+    await api.get("invoice", "c");
+    expect(sdk.getClientCredentialsToken).toHaveBeenCalledTimes(1);
+
+    now += 1_750_000; // inside the 60 s refresh margin
+    await api.get("invoice", "d");
+    expect(sdk.getClientCredentialsToken).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not cache a failed token request", async () => {
+    const sdk = fakeSdkForDraftResources();
+    sdk.getClientCredentialsToken
+      .mockRejectedValueOnce(new Error("identity down"))
+      .mockResolvedValue({ access_token: "access-token", expires_in: 1800 });
+    const api = createXeroApi(environment, sdk);
+
+    await expect(api.get("invoice", "a")).rejects.toThrow(
+      "Xero request failed",
+    );
+    await expect(api.get("invoice", "a")).resolves.toBeDefined();
+    expect(sdk.getClientCredentialsToken).toHaveBeenCalledTimes(2);
+  });
 });

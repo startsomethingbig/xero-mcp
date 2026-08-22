@@ -1,7 +1,10 @@
 import { XeroClient } from "xero-node";
 
 import type { XeroEnvironment } from "../config/environment.js";
-import { UnsupportedDraftResourceError } from "../drafts/errors.js";
+import {
+  DraftStateError,
+  UnsupportedDraftResourceError,
+} from "../drafts/errors.js";
 import { getPackageVersion } from "../helpers/get-package-version.js";
 
 export interface XeroApi {
@@ -27,6 +30,19 @@ type XeroSdk = {
   setTokenSet(tokenSet: unknown): void;
   accountingApi: object;
 };
+
+type TokenSetLike = {
+  expires_in?: number;
+  expires_at?: number;
+};
+
+export interface XeroApiOptions {
+  /** Millisecond clock, injectable for tests. */
+  now?: () => number;
+}
+
+/** Refresh this long before the token actually expires. */
+const TOKEN_REFRESH_MARGIN_MS = 60_000;
 
 type ResourceBinding = {
   collection: string;
@@ -119,6 +135,35 @@ export function formatXeroError(error: unknown): string {
   return "Xero request failed";
 }
 
+function tokenExpiry(tokenSet: unknown, now: number): number {
+  const { expires_at, expires_in } = (tokenSet ?? {}) as TokenSetLike;
+  if (typeof expires_at === "number" && Number.isFinite(expires_at)) {
+    return expires_at * 1_000;
+  }
+  if (typeof expires_in === "number" && Number.isFinite(expires_in)) {
+    return now + expires_in * 1_000;
+  }
+  return now; // unknown lifetime: never reuse
+}
+
+function requireDraftStatus(
+  resource: string,
+  payload: unknown,
+  targetId?: string,
+): void {
+  const status =
+    payload && typeof payload === "object"
+      ? (payload as { status?: unknown }).status
+      : undefined;
+  if (status !== "DRAFT") {
+    throw new DraftStateError(
+      resource,
+      targetId,
+      typeof status === "string" ? status : undefined,
+    );
+  }
+}
+
 export function createXeroApi(
   environment: XeroEnvironment,
   sdk: XeroSdk = new XeroClient({
@@ -127,6 +172,7 @@ export function createXeroApi(
     grantType: "client_credentials",
     scopes: CLIENT_CREDENTIAL_SCOPES,
   }) as unknown as XeroSdk,
+  { now = Date.now }: XeroApiOptions = {},
 ): XeroApi {
   const requestOptions = {
     headers: {
@@ -134,17 +180,33 @@ export function createXeroApi(
     },
   };
 
+  let tokenExpiresAt = 0;
+  let inflight: Promise<void> | undefined;
+
+  /** Fetch a client-credentials token at most once per lifetime, single-flight. */
   async function authenticate(): Promise<void> {
-    const tokenSet = await sdk.getClientCredentialsToken();
-    sdk.setTokenSet(tokenSet);
+    if (now() < tokenExpiresAt - TOKEN_REFRESH_MARGIN_MS) return;
+    if (!inflight) {
+      inflight = (async () => {
+        try {
+          const tokenSet = await sdk.getClientCredentialsToken();
+          sdk.setTokenSet(tokenSet);
+          tokenExpiresAt = tokenExpiry(tokenSet, now());
+        } finally {
+          inflight = undefined;
+        }
+      })();
+    }
+    await inflight;
   }
 
   function requireSupportedResource(resource: string): ResourceBinding {
-    const binding = RESOURCE_BINDINGS[resource];
-    if (!binding) {
+    // Plain-object lookup would resolve "constructor" / "__proto__" to truthy
+    // prototype members; only own keys are real bindings.
+    if (!Object.hasOwn(RESOURCE_BINDINGS, resource)) {
       throw new UnsupportedDraftResourceError(resource);
     }
-    return binding;
+    return RESOURCE_BINDINGS[resource]!;
   }
 
   async function callAccounting(
@@ -185,6 +247,7 @@ export function createXeroApi(
       idempotencyKey: string,
     ) {
       const binding = requireSupportedResource(resource);
+      requireDraftStatus(resource, payload);
       try {
         await authenticate();
         const prefix: unknown[] = [
@@ -204,6 +267,7 @@ export function createXeroApi(
     },
     async update<TRecord>(resource: string, id: string, payload: unknown) {
       const binding = requireSupportedResource(resource);
+      requireDraftStatus(resource, payload, id);
       try {
         await authenticate();
         const prefix: unknown[] = [
