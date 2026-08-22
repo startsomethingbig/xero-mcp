@@ -1,21 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { XeroEnvironment } from "../../config/environment.js";
 import { ConfirmationStore } from "../../drafts/confirmation-store.js";
 import { DraftCommandService } from "../../drafts/draft-command-service.js";
 import { createDraftResourceRegistry } from "../../drafts/resource-registry.js";
 import type { XeroApi } from "../client.js";
+import { testEnvironment } from "../../test/environment.js";
 import { createXeroApi } from "../client.js";
 import { createQuoteAdapter } from "./quote.js";
 
-const environment: XeroEnvironment = {
-  clientId: "client-id",
-  clientSecret: "client-secret",
-  tenantId: "tenant",
-  port: 3000,
-  confirmationTtlSeconds: 600,
-  confirmationSecret: "confirmation-secret",
-};
+const environment = testEnvironment({ tenantId: "tenant" });
 
 const lineItems = [
   {

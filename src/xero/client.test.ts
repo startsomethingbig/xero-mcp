@@ -1,21 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { XeroEnvironment } from "../config/environment.js";
 import {
   DraftStateError,
   UnsupportedDraftResourceError,
   XeroConflictError,
 } from "../drafts/errors.js";
+import { testEnvironment } from "../test/environment.js";
 import { createXeroApi, formatXeroError } from "./client.js";
 
-const environment: XeroEnvironment = {
-  clientId: "client-id",
-  clientSecret: "client-secret",
-  tenantId: "configured-tenant",
-  port: 3000,
-  confirmationTtlSeconds: 600,
-  confirmationSecret: "confirmation-secret",
-};
+const environment = testEnvironment({ tenantId: "configured-tenant" });
 
 const resourceCases = [
   {

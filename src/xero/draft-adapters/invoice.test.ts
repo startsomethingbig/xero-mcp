@@ -1,18 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { XeroEnvironment } from "../../config/environment.js";
 import type { XeroApi } from "../client.js";
+import { testEnvironment } from "../../test/environment.js";
 import { createXeroApi } from "../client.js";
 import { createInvoiceAdapter } from "./invoice.js";
 
-const environment: XeroEnvironment = {
-  clientId: "client-id",
-  clientSecret: "client-secret",
-  tenantId: "tenant",
-  port: 3000,
-  confirmationTtlSeconds: 600,
-  confirmationSecret: "confirmation-secret",
-};
+const environment = testEnvironment({ tenantId: "tenant" });
 
 const lineItems = [
   {

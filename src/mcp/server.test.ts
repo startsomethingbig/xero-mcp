@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { serveStdio } from "../transports/stdio.js";
 import { createXeroMcpServer } from "./server.js";
 
-const WRITE_TOOL_PATTERN = /^(create|update|delete|approve|revert|void|pay|submit|authorise)-/i;
+const WRITE_TOOL_PATTERN =
+  /^(create|update|delete|approve|revert|void|pay|submit|authorise)-/i;
 
 async function listToolNames(): Promise<string[]> {
   const [clientTransport, serverTransport] =
