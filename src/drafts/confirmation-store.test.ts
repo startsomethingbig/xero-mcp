@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
@@ -20,6 +20,7 @@ const confirmation: ConfirmationInput = {
 function buildStore() {
   let now = new Date("2026-08-09T00:00:00.000Z");
   const store = new ConfirmationStore({
+    secret: "test-secret",
     clock: () => now,
     randomBytes: (size) => new Uint8Array(size).fill(0xab),
   });
@@ -49,7 +50,9 @@ describe("ConfirmationStore", () => {
     const record = await store.consume(token, confirmation);
 
     expect(record).toEqual({
-      tokenHash: createHash("sha256").update(token).digest("hex"),
+      tokenHash: createHmac("sha256", "test-secret")
+        .update(token)
+        .digest("hex"),
       ...confirmation,
       consumedAt: "2026-08-09T00:00:00.000Z",
     });
@@ -109,5 +112,24 @@ describe("ConfirmationStore", () => {
     await expect(
       store.consume(token, { ...confirmation, ...mismatch }),
     ).rejects.toMatchObject({ code: "CONFIRMATION_MISMATCH" });
+  });
+});
+
+describe("ConfirmationStore secret", () => {
+  it("keys token hashes with the configured secret", async () => {
+    const randomBytes = (size: number) => new Uint8Array(size).fill(0x11);
+    const storeA = new ConfirmationStore({ secret: "secret-a", randomBytes });
+    const storeB = new ConfirmationStore({ secret: "secret-b", randomBytes });
+
+    const tokenA = await storeA.mint(confirmation);
+
+    expect(storeA.hashToken(tokenA)).not.toBe(storeB.hashToken(tokenA));
+    await expect(storeB.consume(tokenA, {})).rejects.toMatchObject({
+      code: "CONFIRMATION_INVALID",
+    });
+  });
+
+  it("refuses an empty secret", () => {
+    expect(() => new ConfirmationStore({ secret: "" })).toThrow(/secret/i);
   });
 });

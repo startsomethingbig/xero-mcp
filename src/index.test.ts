@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
     authToken: "test-token-that-is-at-least-32-characters",
   })),
   createXeroMcpServer: vi.fn(() => ({})),
+  createServerDependencies: vi.fn(() => ({ marker: "dependencies" })),
   listen: vi.fn((_port: number, _host: string, callback: () => void) =>
     callback(),
   ),
@@ -32,6 +33,9 @@ vi.mock("dotenv", () => ({
 }));
 vi.mock("./config/environment.js", () => ({
   loadEnvironment: mocks.loadEnvironment,
+}));
+vi.mock("./mcp/dependencies.js", () => ({
+  createServerDependencies: mocks.createServerDependencies,
 }));
 vi.mock("./mcp/server.js", () => ({
   createXeroMcpServer: mocks.createXeroMcpServer,
@@ -70,8 +74,9 @@ describe("CLI environment bootstrap", () => {
     expect(mocks.loadEnvironment).toHaveBeenCalledWith(process.env, {
       mode: "http",
     });
+    expect(mocks.createServerDependencies).toHaveBeenCalledOnce();
     expect(mocks.createHttpServer).toHaveBeenCalledWith(
-      expect.anything(),
+      mocks.createServerDependencies.mock.results[0]!.value,
       expect.objectContaining({
         authToken: "test-token-that-is-at-least-32-characters",
         allowedHosts: ["mcp.internal"],

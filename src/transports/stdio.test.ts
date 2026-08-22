@@ -5,6 +5,7 @@ import {
 } from "@modelcontextprotocol/server";
 import { describe, expect, it } from "vitest";
 import { createXeroMcpServer } from "../mcp/server.js";
+import { createTestDependencies } from "../test/dependencies.js";
 import { serveStdio } from "./stdio.js";
 
 function nextMessage(transport: InMemoryTransport): Promise<JSONRPCMessage> {
@@ -24,7 +25,8 @@ describe("stdio transport", () => {
   it("serves modern discovery from the supplied server factory", async () => {
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();
-    const factory: McpServerFactory = () => createXeroMcpServer({});
+    const factory: McpServerFactory = () =>
+      createXeroMcpServer(createTestDependencies());
     const response = nextMessage(clientTransport);
 
     await clientTransport.start();
@@ -57,7 +59,10 @@ describe("stdio transport", () => {
     const response = nextMessage(clientTransport);
 
     await clientTransport.start();
-    await serveStdio(() => createXeroMcpServer({}), serverTransport);
+    await serveStdio(
+      () => createXeroMcpServer(createTestDependencies()),
+      serverTransport,
+    );
     await clientTransport.send({
       jsonrpc: "2.0",
       id: 1,

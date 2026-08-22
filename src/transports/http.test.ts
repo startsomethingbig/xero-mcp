@@ -3,6 +3,7 @@ import { request as httpRequest, type Server } from "node:http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createXeroMcpServer } from "../mcp/server.js";
+import { createTestDependencies } from "../test/dependencies.js";
 import { createHttpServer, type HttpServerOptions } from "./http.js";
 
 vi.mock("../mcp/server.js", { spy: true });
@@ -44,7 +45,10 @@ afterEach(async () => {
 });
 
 function server(options: Partial<HttpServerOptions> = {}): Server {
-  return createHttpServer({}, { authToken: TOKEN, ...options });
+  return createHttpServer(createTestDependencies(), {
+    authToken: TOKEN,
+    ...options,
+  });
 }
 
 async function listen(server: Server): Promise<URL> {
@@ -241,6 +245,24 @@ describe("HTTP transport", () => {
     const response = await postMcp(baseUrl, discover, { ...auth, host: "*" });
 
     expect(response.status).toBe(403);
+  });
+
+  it("hands the same dependencies to every per-request server", async () => {
+    const dependencies = createTestDependencies();
+    const baseUrl = await listen(
+      createHttpServer(dependencies, { authToken: TOKEN }),
+    );
+
+    await postMcp(baseUrl, discover, auth);
+    await postMcp(baseUrl, discover, auth);
+
+    const factory = vi.mocked(createXeroMcpServer);
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(factory.mock.calls[0]![0]).toBe(dependencies);
+    expect(factory.mock.calls[1]![0]).toBe(dependencies);
+    expect(factory.mock.results[0]!.value).not.toBe(
+      factory.mock.results[1]!.value,
+    );
   });
 
   describe("bearer authentication", () => {

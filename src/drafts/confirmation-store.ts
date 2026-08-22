@@ -1,4 +1,4 @@
-import { createHash, randomBytes as secureRandomBytes } from "node:crypto";
+import { createHmac, randomBytes as secureRandomBytes } from "node:crypto";
 
 import type { DraftOperation, Version } from "./types.js";
 
@@ -35,10 +35,6 @@ export class ConfirmationError extends Error {
   }
 }
 
-export function hashConfirmationToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
-
 function sameVersion(left: Version | undefined, right: Version | undefined) {
   return left?.value === right?.value;
 }
@@ -65,20 +61,39 @@ function bindingsMatch(
   );
 }
 
+export interface ConfirmationStoreOptions {
+  /**
+   * Keys the token hash (HMAC-SHA256). Tokens minted under one secret are
+   * unknown to a store using another, and a leaked record table cannot be
+   * matched against tokens without it.
+   */
+  secret: string;
+  clock?: Clock;
+  randomBytes?: RandomBytes;
+}
+
 export class ConfirmationStore {
   private readonly records = new Map<string, ConfirmationRecord>();
+  private readonly secret: string;
   private readonly clock: Clock;
   private readonly randomBytes: RandomBytes;
 
   constructor({
+    secret,
     clock = () => new Date(),
     randomBytes = secureRandomBytes,
-  }: {
-    clock?: Clock;
-    randomBytes?: RandomBytes;
-  } = {}) {
+  }: ConfirmationStoreOptions) {
+    if (typeof secret !== "string" || secret.length === 0) {
+      throw new Error("ConfirmationStore requires a non-empty secret");
+    }
+    this.secret = secret;
     this.clock = clock;
     this.randomBytes = randomBytes;
+  }
+
+  /** Keyed digest of a token; the only form in which a token is ever stored. */
+  hashToken(token: string): string {
+    return createHmac("sha256", this.secret).update(token).digest("hex");
   }
 
   async mint(input: ConfirmationInput): Promise<string> {
@@ -88,7 +103,7 @@ export class ConfirmationStore {
     }
 
     const token = Buffer.from(bytes).toString("base64url");
-    const tokenHash = hashConfirmationToken(token);
+    const tokenHash = this.hashToken(token);
     if (this.records.has(tokenHash)) {
       throw new Error("Confirmation token collision");
     }
@@ -108,7 +123,7 @@ export class ConfirmationStore {
       throw new ConfirmationError("CONFIRMATION_INVALID");
     }
 
-    const tokenHash = hashConfirmationToken(token);
+    const tokenHash = this.hashToken(token);
     const record = this.records.get(tokenHash);
     if (!record) throw new ConfirmationError("CONFIRMATION_INVALID");
     if (record.consumedAt) throw new ConfirmationError("CONFIRMATION_USED");

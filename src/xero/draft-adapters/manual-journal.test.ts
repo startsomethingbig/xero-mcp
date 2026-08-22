@@ -100,7 +100,7 @@ describe("manual-journal draft adapter", () => {
     const registry = createDraftResourceRegistry(api);
     const service = new DraftCommandService({
       tenantId: "tenant",
-      confirmations: new ConfirmationStore(),
+      confirmations: new ConfirmationStore({ secret: "test-secret" }),
       getAdapter: (resource) => registry.get(resource),
     });
 

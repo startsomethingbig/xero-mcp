@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import type { AddressInfo } from "node:net";
 
 import { loadEnvironment } from "./config/environment.js";
+import { createServerDependencies } from "./mcp/dependencies.js";
 import { createXeroMcpServer } from "./mcp/server.js";
 import { createHttpServer } from "./transports/http.js";
 import { serveStdio } from "./transports/stdio.js";
@@ -31,10 +32,9 @@ const main = async () => {
     return;
   }
 
-  const dependencies = {};
-
   if (mode === "http") {
     const environment = loadEnvironment(process.env, { mode: "http" });
+    const dependencies = createServerDependencies(environment);
     const server = createHttpServer(dependencies, {
       authToken: environment.authToken,
       allowedHosts: environment.allowedHosts,
@@ -49,7 +49,8 @@ const main = async () => {
     return;
   }
 
-  loadEnvironment(process.env, { mode: "stdio" });
+  const environment = loadEnvironment(process.env, { mode: "stdio" });
+  const dependencies = createServerDependencies(environment);
   await serveStdio(() => createXeroMcpServer(dependencies));
 };
 

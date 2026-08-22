@@ -2,6 +2,7 @@ import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { describe, expect, it } from "vitest";
 
 import { serveStdio } from "../transports/stdio.js";
+import { createTestDependencies } from "../test/dependencies.js";
 import { createXeroMcpServer } from "./server.js";
 
 const WRITE_TOOL_PATTERN =
@@ -10,7 +11,10 @@ const WRITE_TOOL_PATTERN =
 async function listToolNames(): Promise<string[]> {
   const [clientTransport, serverTransport] =
     InMemoryTransport.createLinkedPair();
-  await serveStdio(() => createXeroMcpServer({}), serverTransport);
+  await serveStdio(
+    () => createXeroMcpServer(createTestDependencies()),
+    serverTransport,
+  );
 
   const client = new Client(
     { name: "test", version: "1" },

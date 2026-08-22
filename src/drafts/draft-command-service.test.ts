@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
@@ -111,6 +111,7 @@ function buildDraftService(record?: Partial<Invoice>) {
   let randomByte = 0;
   const clock = () => now;
   const confirmations = new ConfirmationStore({
+    secret: "test-secret",
     clock,
     randomBytes: (size) => new Uint8Array(size).fill(++randomByte),
   });
@@ -161,7 +162,7 @@ describe("DraftCommandService", () => {
     expect(adapter.createCalls).toEqual([
       {
         payload: { ...invoicePayload, status: "DRAFT" },
-        idempotencyKey: createHash("sha256")
+        idempotencyKey: createHmac("sha256", "test-secret")
           .update(preview.confirmationToken)
           .digest("hex"),
       },

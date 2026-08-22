@@ -10,7 +10,6 @@ import {
   type Clock,
   type ConfirmationInput,
   type ConfirmationStore,
-  hashConfirmationToken,
 } from "./confirmation-store.js";
 import type { DraftOperation, DraftResourceAdapter, Version } from "./types.js";
 
@@ -155,7 +154,7 @@ export class DraftCommandService {
       expiresAt,
     };
     const confirmationToken = await this.confirmations.mint(input);
-    const tokenHash = hashConfirmationToken(confirmationToken);
+    const tokenHash = this.confirmations.hashToken(confirmationToken);
     this.pending.set(tokenHash, {
       ...structuredClone(input),
       adapter,
@@ -173,7 +172,7 @@ export class DraftCommandService {
   }
 
   async apply(token: string): Promise<DraftApplyResult> {
-    const tokenHash = hashConfirmationToken(token);
+    const tokenHash = this.confirmations.hashToken(token);
     const pending = this.pending.get(tokenHash);
     if (!pending) {
       await this.confirmations.consume(token, { tenantId: this.tenantId });
