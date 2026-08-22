@@ -1,14 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { CreateTools } from "./create/index.js";
-import { DeleteTools } from "./delete/index.js";
 import { GetTools } from "./get/index.js";
 import { ListTools } from "./list/index.js";
 import { ToolFactory } from "./tool-factory.js";
-import { UpdateTools } from "./update/index.js";
+
+const WRITE_TOOL_PATTERN = /^(create|update|delete|approve|revert|void|pay|submit|authorise)-/i;
 
 describe("ToolFactory", () => {
-  it("registers legacy read tools without registering legacy writes", () => {
+  it("registers only the read tools", () => {
     const registerTool = vi.fn();
 
     ToolFactory({ registerTool } as never);
@@ -17,11 +16,10 @@ describe("ToolFactory", () => {
     const readNames = [...GetTools, ...ListTools].map(
       (createTool) => createTool().name,
     );
-    const writeNames = [...CreateTools, ...UpdateTools, ...DeleteTools].map(
-      (createTool) => createTool().name,
-    );
 
     expect(registeredNames).toEqual(readNames);
-    expect(registeredNames).not.toEqual(expect.arrayContaining(writeNames));
+    expect(registeredNames.filter((n) => WRITE_TOOL_PATTERN.test(n))).toEqual(
+      [],
+    );
   });
 });
