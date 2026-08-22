@@ -62,13 +62,16 @@ describe("credit-note draft adapter", () => {
     const adapter = createCreditNoteAdapter(fakeApi());
 
     expect(
-      adapter.parsePayload({
-        contactId: "contact-1",
-        lineItems,
-        type: "ACCRECCREDIT",
-        status: "AUTHORISED",
-        total: 50,
-      }),
+      adapter.parsePayload(
+        {
+          contactId: "contact-1",
+          lineItems,
+          type: "ACCRECCREDIT",
+          status: "AUTHORISED",
+          total: 50,
+        },
+        "update",
+      ),
     ).toEqual({
       contactId: "contact-1",
       lineItems,
@@ -103,7 +106,7 @@ describe("credit-note draft adapter", () => {
     const record = {
       creditNoteID: "credit-note-1",
       status: "DRAFT",
-      updatedDateUTCString: "2026-08-09T01:00:00.000Z",
+      updatedDateUTC: new Date("2026-08-09T01:00:00.000Z"),
     };
     const get = vi.fn().mockResolvedValue(record);
     const adapter = createCreditNoteAdapter(fakeApi({ get }));
@@ -121,8 +124,8 @@ describe("credit-note draft adapter", () => {
         updatedDateUTC: new Date("2026-08-09T02:00:00.000Z"),
       }),
     ).toEqual({ value: "2026-08-09T02:00:00.000Z" });
-    expect(adapter.getVersion({ creditNoteID: "credit-note-1" })).toEqual({
-      value: "credit-note-1",
-    });
+    expect(
+      adapter.getVersion({ creditNoteID: "credit-note-1" }),
+    ).toBeUndefined();
   });
 });

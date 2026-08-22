@@ -133,3 +133,69 @@ describe("ConfirmationStore secret", () => {
     expect(() => new ConfirmationStore({ secret: "" })).toThrow(/secret/i);
   });
 });
+
+describe("ConfirmationStore housekeeping", () => {
+  it("sweeps expired records when minting", async () => {
+    let now = new Date("2026-08-09T00:00:00.000Z");
+    let counter = 0;
+    const store = new ConfirmationStore({
+      secret: "test-secret",
+      clock: () => now,
+      randomBytes: (size) => new Uint8Array(size).fill(++counter),
+    });
+    const setNow = (iso: string) => {
+      now = new Date(iso);
+    };
+
+    await store.mint(confirmation);
+    await store.mint({ ...confirmation, targetId: "invoice-2" });
+    expect(store.size).toBe(2);
+
+    setNow("2026-08-09T00:10:00.000Z");
+    await store.mint({
+      ...confirmation,
+      expiresAt: "2026-08-09T01:00:00.000Z",
+    });
+
+    expect(store.size).toBe(1);
+  });
+
+  it("drops consumed records once they expire", async () => {
+    const { store, setNow } = buildStore();
+    const token = await store.mint(confirmation);
+    await store.consume(token, {});
+    expect(store.size).toBe(1);
+
+    setNow("2026-08-09T00:10:00.000Z");
+    await expect(store.consume(token, {})).rejects.toMatchObject({
+      code: "CONFIRMATION_INVALID",
+    });
+    expect(store.size).toBe(0);
+  });
+
+  it("caps the number of live records", async () => {
+    const store = new ConfirmationStore({
+      secret: "test-secret",
+      maxRecords: 2,
+      clock: () => new Date("2026-08-09T00:00:00.000Z"),
+    });
+
+    await store.mint(confirmation);
+    await store.mint(confirmation);
+    await expect(store.mint(confirmation)).rejects.toThrow(
+      /too many pending confirmations/i,
+    );
+  });
+
+  it("reports token state without consuming it", async () => {
+    const { store, setNow } = buildStore();
+    const token = await store.mint(confirmation);
+
+    expect(store.inspect("not-a-token")).toBe("unknown");
+    expect(store.inspect(token)).toBe("live");
+    await store.consume(token, {});
+    expect(store.inspect(token)).toBe("consumed");
+    setNow("2026-08-09T00:10:00.000Z");
+    expect(store.inspect(token)).toBe("expired");
+  });
+});

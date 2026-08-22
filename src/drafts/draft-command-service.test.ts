@@ -1,6 +1,4 @@
-import { createHmac } from "node:crypto";
-
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { DraftResourceAdapter } from "./types.js";
 import { ConfirmationStore } from "./confirmation-store.js";
@@ -32,6 +30,7 @@ class FakeInvoiceAdapter implements DraftResourceAdapter<
     payload: InvoicePayload & { status: "DRAFT" };
   }> = [];
   readonly deleteCalls: string[] = [];
+  readonly parseCalls: Array<"create" | "update"> = [];
 
   constructor(record?: Partial<Invoice>) {
     this.record = record
@@ -45,10 +44,14 @@ class FakeInvoiceAdapter implements DraftResourceAdapter<
       : undefined;
   }
 
-  parsePayload(input: unknown): InvoicePayload {
+  parsePayload(input: unknown, operation: "create" | "update"): InvoicePayload {
+    this.parseCalls.push(operation);
     if (!input || typeof input !== "object") throw new TypeError("payload");
     const payload = input as Partial<InvoicePayload>;
     if (typeof payload.reference !== "string") throw new TypeError("reference");
+    if (operation === "create" && payload.reference.length === 0) {
+      throw new TypeError("reference is required to create");
+    }
     return { reference: payload.reference, status: payload.status };
   }
 
@@ -102,7 +105,7 @@ class FakeInvoiceAdapter implements DraftResourceAdapter<
   }
 
   getVersion(record: Invoice) {
-    return { value: record.version };
+    return record.version ? { value: record.version } : undefined;
   }
 }
 
@@ -127,10 +130,23 @@ function buildDraftService(record?: Partial<Invoice>) {
   return {
     service,
     adapter,
+    confirmations,
+    clock,
     setNow(iso: string) {
       now = new Date(iso);
     },
   };
+}
+
+function previewCreate(
+  service: DraftCommandService,
+  reference = "August services",
+) {
+  return service.preview({
+    operation: "create",
+    resource: "invoice",
+    payload: { reference },
+  });
 }
 
 describe("DraftCommandService", () => {
@@ -162,9 +178,7 @@ describe("DraftCommandService", () => {
     expect(adapter.createCalls).toEqual([
       {
         payload: { ...invoicePayload, status: "DRAFT" },
-        idempotencyKey: createHmac("sha256", "test-secret")
-          .update(preview.confirmationToken)
-          .digest("hex"),
+        idempotencyKey: expect.stringMatching(/^[0-9a-f]{64}$/),
       },
     ]);
     await expect(
@@ -289,5 +303,155 @@ describe("DraftCommandService", () => {
 
     expect(adapter.getCalls).toEqual(["inv-1", "inv-1"]);
     expect(adapter.deleteCalls).toEqual(["inv-1"]);
+  });
+  it("rejects an unknown operation at preview before any token is minted", async () => {
+    const { service, adapter, confirmations } = buildDraftService({
+      status: "DRAFT",
+    });
+    const mint = vi.spyOn(confirmations, "mint");
+
+    await expect(
+      service.preview({
+        operation: "purge" as never,
+        resource: "invoice",
+        targetId: "inv-1",
+      }),
+    ).rejects.toThrow(/operation/);
+
+    expect(mint).not.toHaveBeenCalled();
+    expect(adapter.deleteCalls).toHaveLength(0);
+  });
+
+  it("rejects malformed tokens as invalid without touching the store", async () => {
+    const { service, confirmations } = buildDraftService();
+    const hashToken = vi.spyOn(confirmations, "hashToken");
+
+    await expect(service.apply(123 as never)).rejects.toMatchObject({
+      code: "CONFIRMATION_INVALID",
+    });
+    await expect(service.apply("x".repeat(1_000_000))).rejects.toMatchObject({
+      code: "CONFIRMATION_INVALID",
+    });
+    await expect(service.apply("")).rejects.toMatchObject({
+      code: "CONFIRMATION_INVALID",
+    });
+
+    expect(hashToken).not.toHaveBeenCalled();
+  });
+
+  it("does not consume a token it did not mint", async () => {
+    const owner = buildDraftService();
+    const stranger = new DraftCommandService({
+      tenantId: "tenant-1",
+      clock: owner.clock,
+      confirmations: owner.confirmations,
+      getAdapter: () => undefined,
+    });
+    const preview = await previewCreate(owner.service);
+
+    await expect(
+      stranger.apply(preview.confirmationToken),
+    ).rejects.toMatchObject({ code: "CONFIRMATION_INVALID" });
+    await expect(
+      owner.service.apply(preview.confirmationToken),
+    ).resolves.toMatchObject({ operation: "create" });
+  });
+
+  it("refuses to preview an update or delete whose target has no version", async () => {
+    const { service, adapter } = buildDraftService({ version: "" });
+
+    await expect(
+      service.preview({
+        operation: "delete",
+        resource: "invoice",
+        targetId: "inv-1",
+      }),
+    ).rejects.toMatchObject({ code: "VERSION_UNAVAILABLE" });
+
+    expect(adapter.deleteCalls).toHaveLength(0);
+  });
+
+  it("refuses to apply when the re-fetched target has lost its version", async () => {
+    const { service, adapter } = buildDraftService({ status: "DRAFT" });
+    const preview = await service.preview({
+      operation: "delete",
+      resource: "invoice",
+      targetId: "inv-1",
+    });
+    adapter.record!.version = "";
+
+    await expect(
+      service.apply(preview.confirmationToken),
+    ).rejects.toMatchObject({ code: "VERSION_UNAVAILABLE" });
+
+    expect(adapter.deleteCalls).toHaveLength(0);
+  });
+
+  it("passes the operation to the adapter so creates are validated strictly at preview", async () => {
+    const { service, adapter, confirmations } = buildDraftService({
+      status: "DRAFT",
+    });
+    const mint = vi.spyOn(confirmations, "mint");
+
+    await expect(previewCreate(service, "")).rejects.toThrow(/required/);
+    expect(mint).not.toHaveBeenCalled();
+
+    await service.preview({
+      operation: "update",
+      resource: "invoice",
+      targetId: "inv-1",
+      payload: { reference: "" },
+    });
+    expect(adapter.parseCalls).toEqual(["create", "update"]);
+  });
+
+  it("drops pending state when an apply fails", async () => {
+    const { service, adapter } = buildDraftService({ status: "DRAFT" });
+    const preview = await service.preview({
+      operation: "update",
+      resource: "invoice",
+      targetId: "inv-1",
+      payload: invoicePayload,
+    });
+    adapter.record!.status = "AUTHORISED";
+
+    await expect(
+      service.apply(preview.confirmationToken),
+    ).rejects.toMatchObject({ code: "NOT_DRAFT" });
+
+    expect(service.pendingCount).toBe(0);
+    expect(adapter.updateCalls).toHaveLength(0);
+  });
+
+  it("sweeps expired previews so abandoned payloads are not retained", async () => {
+    const { service, setNow } = buildDraftService();
+
+    await previewCreate(service);
+    await previewCreate(service, "Second");
+    expect(service.pendingCount).toBe(2);
+
+    setNow("2026-08-09T00:10:01.000Z");
+    await previewCreate(service, "Third");
+
+    expect(service.pendingCount).toBe(1);
+  });
+
+  it("derives the create idempotency key from the operation, not the token", async () => {
+    const { service, adapter } = buildDraftService();
+
+    const first = await previewCreate(service);
+    await service.apply(first.confirmationToken);
+    const second = await previewCreate(service);
+    await service.apply(second.confirmationToken);
+    const other = await previewCreate(service, "Different");
+    await service.apply(other.confirmationToken);
+
+    expect(first.confirmationToken).not.toBe(second.confirmationToken);
+    expect(adapter.createCalls[0]!.idempotencyKey).toBe(
+      adapter.createCalls[1]!.idempotencyKey,
+    );
+    expect(adapter.createCalls[2]!.idempotencyKey).not.toBe(
+      adapter.createCalls[0]!.idempotencyKey,
+    );
   });
 });

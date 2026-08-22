@@ -2,26 +2,36 @@ import { z } from "zod";
 
 import type { DraftResourceAdapter } from "../../drafts/types.js";
 import type { XeroApi } from "../client.js";
+import {
+  amount,
+  httpsUrl,
+  lines,
+  longText,
+  parseFor,
+  text,
+  versionOf,
+  withoutUndefined,
+} from "./shared.js";
 
 const journalLineSchema = z.object({
-  lineAmount: z.number(),
-  accountCode: z.string(),
-  description: z.string().optional(),
-  taxType: z.string().optional(),
+  lineAmount: amount(),
+  accountCode: text(),
+  description: longText().optional(),
+  taxType: text().optional(),
 });
 
 const manualJournalPayloadSchema = z.object({
-  narration: z.string().optional(),
-  journalLines: z.array(journalLineSchema).optional(),
-  date: z.string().optional(),
-  lineAmountTypes: z.string().optional(),
-  url: z.string().optional(),
+  narration: longText().optional(),
+  journalLines: lines(journalLineSchema).optional(),
+  date: text().optional(),
+  lineAmountTypes: text().optional(),
+  url: httpsUrl().optional(),
   showOnCashBasisReports: z.boolean().optional(),
 });
 
 const manualJournalCreatePayloadSchema = manualJournalPayloadSchema.extend({
-  narration: z.string(),
-  journalLines: z.array(journalLineSchema),
+  narration: longText(),
+  journalLines: lines(journalLineSchema),
 });
 
 export type ManualJournalDraftPayload = z.infer<
@@ -31,15 +41,8 @@ export type ManualJournalDraftPayload = z.infer<
 export interface ManualJournalRecord {
   manualJournalID: string;
   status?: string;
-  updatedDateUTCString?: string;
-  updatedDateUTC?: Date;
+  updatedDateUTC?: Date | string;
   [key: string]: unknown;
-}
-
-function withoutUndefined<T extends Record<string, unknown>>(value: T) {
-  return Object.fromEntries(
-    Object.entries(value).filter(([, field]) => field !== undefined),
-  );
 }
 
 function mapPayload(payload: ManualJournalDraftPayload) {
@@ -59,8 +62,15 @@ export function createManualJournalAdapter(
   return {
     kind: "manual_journal",
 
-    parsePayload(input) {
-      return withoutUndefined(manualJournalPayloadSchema.parse(input));
+    parsePayload(input, operation) {
+      return parseFor(
+        {
+          partial: manualJournalPayloadSchema,
+          create: manualJournalCreatePayloadSchema,
+        },
+        input,
+        operation,
+      );
     },
 
     get(id) {
@@ -98,12 +108,7 @@ export function createManualJournalAdapter(
     },
 
     getVersion(record) {
-      return {
-        value:
-          record.updatedDateUTCString ??
-          record.updatedDateUTC?.toISOString() ??
-          record.manualJournalID,
-      };
+      return versionOf(record.updatedDateUTC);
     },
   };
 }

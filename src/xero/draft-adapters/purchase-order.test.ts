@@ -85,15 +85,18 @@ describe("purchase-order draft adapter", () => {
     const adapter = createPurchaseOrderAdapter(fakeApi());
 
     expect(
-      adapter.parsePayload({
-        contactId: "contact-1",
-        deliveryAddress: "1 Harbour Street",
-        lineItems,
-        reference: "PO-8",
-        status: "AUTHORISED",
-        sentToContact: true,
-        total: 500,
-      }),
+      adapter.parsePayload(
+        {
+          contactId: "contact-1",
+          deliveryAddress: "1 Harbour Street",
+          lineItems,
+          reference: "PO-8",
+          status: "AUTHORISED",
+          sentToContact: true,
+          total: 500,
+        },
+        "update",
+      ),
     ).toEqual({
       contactId: "contact-1",
       deliveryAddress: "1 Harbour Street",
@@ -177,18 +180,9 @@ describe("purchase-order draft adapter", () => {
     expect(
       adapter.getVersion({
         purchaseOrderID: "po-1",
-        updatedDateUTCString: "2026-08-09T01:00:00.000Z",
-        updatedDateUTC: new Date("2026-08-09T02:00:00.000Z"),
-      }),
-    ).toEqual({ value: "2026-08-09T01:00:00.000Z" });
-    expect(
-      adapter.getVersion({
-        purchaseOrderID: "po-1",
         updatedDateUTC: new Date("2026-08-09T02:00:00.000Z"),
       }),
     ).toEqual({ value: "2026-08-09T02:00:00.000Z" });
-    expect(adapter.getVersion({ purchaseOrderID: "po-1" })).toEqual({
-      value: "po-1",
-    });
+    expect(adapter.getVersion({ purchaseOrderID: "po-1" })).toBeUndefined();
   });
 });

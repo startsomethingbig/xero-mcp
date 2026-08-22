@@ -2,46 +2,55 @@ import { z } from "zod";
 
 import type { DraftResourceAdapter } from "../../drafts/types.js";
 import type { XeroApi } from "../client.js";
+import {
+  amount,
+  lines,
+  longText,
+  parseFor,
+  text,
+  versionOf,
+  withoutUndefined,
+} from "./shared.js";
 
 const trackingSchema = z.object({
-  name: z.string(),
-  option: z.string(),
-  trackingCategoryID: z.string(),
+  name: text(),
+  option: text(),
+  trackingCategoryID: text(),
 });
 
 const lineItemSchema = z.object({
-  lineItemID: z.string().optional(),
-  description: z.string(),
-  quantity: z.number().optional(),
-  unitAmount: z.number().optional(),
-  accountCode: z.string().optional(),
-  taxType: z.string().optional(),
-  itemCode: z.string().optional(),
-  tracking: z.array(trackingSchema).optional(),
-  discountRate: z.number().optional(),
-  discountAmount: z.number().optional(),
+  lineItemID: text().optional(),
+  description: longText(),
+  quantity: amount().optional(),
+  unitAmount: amount().optional(),
+  accountCode: text().optional(),
+  taxType: text().optional(),
+  itemCode: text().optional(),
+  tracking: lines(trackingSchema).optional(),
+  discountRate: amount().optional(),
+  discountAmount: amount().optional(),
 });
 
 const purchaseOrderPayloadSchema = z.object({
-  contactId: z.string().optional(),
-  lineItems: z.array(lineItemSchema).optional(),
-  date: z.string().optional(),
-  deliveryDate: z.string().optional(),
-  lineAmountTypes: z.string().optional(),
-  purchaseOrderNumber: z.string().optional(),
-  reference: z.string().optional(),
-  brandingThemeId: z.string().optional(),
-  currencyCode: z.string().optional(),
-  deliveryAddress: z.string().optional(),
-  attentionTo: z.string().optional(),
-  telephone: z.string().optional(),
-  deliveryInstructions: z.string().optional(),
-  expectedArrivalDate: z.string().optional(),
+  contactId: text().optional(),
+  lineItems: lines(lineItemSchema).optional(),
+  date: text().optional(),
+  deliveryDate: text().optional(),
+  lineAmountTypes: text().optional(),
+  purchaseOrderNumber: text().optional(),
+  reference: text().optional(),
+  brandingThemeId: text().optional(),
+  currencyCode: text().optional(),
+  deliveryAddress: text().optional(),
+  attentionTo: text().optional(),
+  telephone: text().optional(),
+  deliveryInstructions: text().optional(),
+  expectedArrivalDate: text().optional(),
 });
 
 const purchaseOrderCreatePayloadSchema = purchaseOrderPayloadSchema.extend({
-  contactId: z.string(),
-  lineItems: z.array(lineItemSchema),
+  contactId: text(),
+  lineItems: lines(lineItemSchema),
 });
 
 export type PurchaseOrderDraftPayload = z.infer<
@@ -51,15 +60,8 @@ export type PurchaseOrderDraftPayload = z.infer<
 export interface PurchaseOrderRecord {
   purchaseOrderID: string;
   status?: string;
-  updatedDateUTCString?: string;
-  updatedDateUTC?: Date;
+  updatedDateUTC?: Date | string;
   [key: string]: unknown;
-}
-
-function withoutUndefined<T extends Record<string, unknown>>(value: T) {
-  return Object.fromEntries(
-    Object.entries(value).filter(([, field]) => field !== undefined),
-  );
 }
 
 function mapPayload(payload: PurchaseOrderDraftPayload) {
@@ -87,8 +89,15 @@ export function createPurchaseOrderAdapter(
   return {
     kind: "purchase_order",
 
-    parsePayload(input) {
-      return withoutUndefined(purchaseOrderPayloadSchema.parse(input));
+    parsePayload(input, operation) {
+      return parseFor(
+        {
+          partial: purchaseOrderPayloadSchema,
+          create: purchaseOrderCreatePayloadSchema,
+        },
+        input,
+        operation,
+      );
     },
 
     get(id) {
@@ -126,12 +135,7 @@ export function createPurchaseOrderAdapter(
     },
 
     getVersion(record) {
-      return {
-        value:
-          record.updatedDateUTCString ??
-          record.updatedDateUTC?.toISOString() ??
-          record.purchaseOrderID,
-      };
+      return versionOf(record.updatedDateUTC);
     },
   };
 }

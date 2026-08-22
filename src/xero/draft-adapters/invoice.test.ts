@@ -85,15 +85,18 @@ describe("invoice draft adapter", () => {
     const adapter = createInvoiceAdapter(fakeApi());
 
     expect(
-      adapter.parsePayload({
-        contactId: "contact-1",
-        lineItems,
-        type: "ACCREC",
-        reference: "INV-8",
-        status: "AUTHORISED",
-        dueDate: undefined,
-        total: 999,
-      }),
+      adapter.parsePayload(
+        {
+          contactId: "contact-1",
+          lineItems,
+          type: "ACCREC",
+          reference: "INV-8",
+          status: "AUTHORISED",
+          dueDate: undefined,
+          total: 999,
+        },
+        "update",
+      ),
     ).toEqual({
       contactId: "contact-1",
       lineItems,
@@ -160,7 +163,7 @@ describe("invoice draft adapter", () => {
     );
   });
 
-  it("uses Xero status and the documented version fallback order", () => {
+  it("uses Xero status and only a real UpdatedDateUTC as the version", () => {
     const adapter = createInvoiceAdapter(fakeApi());
 
     expect(
@@ -169,18 +172,41 @@ describe("invoice draft adapter", () => {
     expect(
       adapter.getVersion({
         invoiceID: "invoice-1",
-        updatedDateUTCString: "2026-08-09T01:00:00.000Z",
-        updatedDateUTC: new Date("2026-08-09T02:00:00.000Z"),
-      }),
-    ).toEqual({ value: "2026-08-09T01:00:00.000Z" });
-    expect(
-      adapter.getVersion({
-        invoiceID: "invoice-1",
         updatedDateUTC: new Date("2026-08-09T02:00:00.000Z"),
       }),
     ).toEqual({ value: "2026-08-09T02:00:00.000Z" });
-    expect(adapter.getVersion({ invoiceID: "invoice-1" })).toEqual({
-      value: "invoice-1",
+    expect(adapter.getVersion({ invoiceID: "invoice-1" })).toBeUndefined();
+  });
+
+  it("validates the strict create schema at preview time", () => {
+    const adapter = createInvoiceAdapter(fakeApi());
+
+    expect(() =>
+      adapter.parsePayload({ reference: "INV-9" }, "create"),
+    ).toThrow();
+    expect(adapter.parsePayload({ reference: "INV-9" }, "update")).toEqual({
+      reference: "INV-9",
     });
+  });
+
+  it("rejects non-finite and oversized values", () => {
+    const adapter = createInvoiceAdapter(fakeApi());
+    const line = lineItems[0]!;
+
+    expect(() =>
+      adapter.parsePayload(
+        { lineItems: [{ ...line, unitAmount: Number.POSITIVE_INFINITY }] },
+        "update",
+      ),
+    ).toThrow();
+    expect(() =>
+      adapter.parsePayload(
+        { lineItems: [{ ...line, description: "x".repeat(4001) }] },
+        "update",
+      ),
+    ).toThrow();
+    expect(() =>
+      adapter.parsePayload({ reference: "x".repeat(501) }, "update"),
+    ).toThrow();
   });
 });

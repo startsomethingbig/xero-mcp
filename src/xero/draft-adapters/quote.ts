@@ -2,45 +2,54 @@ import { z } from "zod";
 
 import type { DraftResourceAdapter } from "../../drafts/types.js";
 import type { XeroApi } from "../client.js";
+import {
+  amount,
+  lines,
+  longText,
+  parseFor,
+  text,
+  versionOf,
+  withoutUndefined,
+} from "./shared.js";
 
 const trackingSchema = z.object({
-  name: z.string(),
-  option: z.string(),
-  trackingCategoryID: z.string(),
+  name: text(),
+  option: text(),
+  trackingCategoryID: text(),
 });
 
 const lineItemSchema = z.object({
-  lineItemID: z.string().optional(),
-  description: z.string(),
-  quantity: z.number().optional(),
-  unitAmount: z.number().optional(),
-  accountCode: z.string().optional(),
-  taxType: z.string().optional(),
-  itemCode: z.string().optional(),
-  tracking: z.array(trackingSchema).optional(),
-  discountRate: z.number().optional(),
-  discountAmount: z.number().optional(),
+  lineItemID: text().optional(),
+  description: longText(),
+  quantity: amount().optional(),
+  unitAmount: amount().optional(),
+  accountCode: text().optional(),
+  taxType: text().optional(),
+  itemCode: text().optional(),
+  tracking: lines(trackingSchema).optional(),
+  discountRate: amount().optional(),
+  discountAmount: amount().optional(),
 });
 
 const quotePayloadSchema = z.object({
-  contactId: z.string().optional(),
-  lineItems: z.array(lineItemSchema).optional(),
-  quoteNumber: z.string().optional(),
-  reference: z.string().optional(),
-  terms: z.string().optional(),
-  date: z.string().optional(),
-  expiryDate: z.string().optional(),
-  currencyCode: z.string().optional(),
-  currencyRate: z.number().optional(),
-  title: z.string().optional(),
-  summary: z.string().optional(),
-  brandingThemeId: z.string().optional(),
-  lineAmountTypes: z.string().optional(),
+  contactId: text().optional(),
+  lineItems: lines(lineItemSchema).optional(),
+  quoteNumber: text().optional(),
+  reference: text().optional(),
+  terms: text().optional(),
+  date: text().optional(),
+  expiryDate: text().optional(),
+  currencyCode: text().optional(),
+  currencyRate: amount().optional(),
+  title: text().optional(),
+  summary: text().optional(),
+  brandingThemeId: text().optional(),
+  lineAmountTypes: text().optional(),
 });
 
 const quoteCreatePayloadSchema = quotePayloadSchema.extend({
-  contactId: z.string(),
-  lineItems: z.array(lineItemSchema),
+  contactId: text(),
+  lineItems: lines(lineItemSchema),
 });
 
 export type QuoteDraftPayload = z.infer<typeof quotePayloadSchema>;
@@ -48,15 +57,8 @@ export type QuoteDraftPayload = z.infer<typeof quotePayloadSchema>;
 export interface QuoteRecord {
   quoteID: string;
   status?: string;
-  updatedDateUTCString?: string;
-  updatedDateUTC?: Date;
+  updatedDateUTC?: Date | string;
   [key: string]: unknown;
-}
-
-function withoutUndefined<T extends Record<string, unknown>>(value: T) {
-  return Object.fromEntries(
-    Object.entries(value).filter(([, field]) => field !== undefined),
-  );
 }
 
 function mapPayload(payload: QuoteDraftPayload) {
@@ -83,8 +85,12 @@ export function createQuoteAdapter(
   return {
     kind: "quote",
 
-    parsePayload(input) {
-      return withoutUndefined(quotePayloadSchema.parse(input));
+    parsePayload(input, operation) {
+      return parseFor(
+        { partial: quotePayloadSchema, create: quoteCreatePayloadSchema },
+        input,
+        operation,
+      );
     },
 
     get(id) {
@@ -122,12 +128,7 @@ export function createQuoteAdapter(
     },
 
     getVersion(record) {
-      return {
-        value:
-          record.updatedDateUTCString ??
-          record.updatedDateUTC?.toISOString() ??
-          record.quoteID,
-      };
+      return versionOf(record.updatedDateUTC);
     },
   };
 }

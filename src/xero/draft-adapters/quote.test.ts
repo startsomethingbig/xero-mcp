@@ -83,14 +83,17 @@ describe("quote draft adapter", () => {
     const adapter = createQuoteAdapter(fakeApi());
 
     expect(
-      adapter.parsePayload({
-        contactId: "contact-1",
-        lineItems,
-        reference: "QUOTE-8",
-        status: "SENT",
-        sentToContact: true,
-        total: 250,
-      }),
+      adapter.parsePayload(
+        {
+          contactId: "contact-1",
+          lineItems,
+          reference: "QUOTE-8",
+          status: "SENT",
+          sentToContact: true,
+          total: 250,
+        },
+        "update",
+      ),
     ).toEqual({
       contactId: "contact-1",
       lineItems,
@@ -171,18 +174,9 @@ describe("quote draft adapter", () => {
     expect(
       adapter.getVersion({
         quoteID: "quote-1",
-        updatedDateUTCString: "2026-08-09T01:00:00.000Z",
-        updatedDateUTC: new Date("2026-08-09T02:00:00.000Z"),
-      }),
-    ).toEqual({ value: "2026-08-09T01:00:00.000Z" });
-    expect(
-      adapter.getVersion({
-        quoteID: "quote-1",
         updatedDateUTC: new Date("2026-08-09T02:00:00.000Z"),
       }),
     ).toEqual({ value: "2026-08-09T02:00:00.000Z" });
-    expect(adapter.getVersion({ quoteID: "quote-1" })).toEqual({
-      value: "quote-1",
-    });
+    expect(adapter.getVersion({ quoteID: "quote-1" })).toBeUndefined();
   });
 });

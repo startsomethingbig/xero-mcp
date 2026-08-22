@@ -39,3 +39,17 @@ export class XeroConflictError extends Error {
     this.name = "XeroConflictError";
   }
 }
+
+export class VersionUnavailableError extends Error {
+  readonly code = "VERSION_UNAVAILABLE";
+
+  constructor(
+    readonly resource: string,
+    readonly targetId: string,
+  ) {
+    super(
+      `${resource} ${targetId} has no version marker, so it cannot be safely changed`,
+    );
+    this.name = "VersionUnavailableError";
+  }
+}

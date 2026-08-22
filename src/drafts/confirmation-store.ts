@@ -68,18 +68,24 @@ export interface ConfirmationStoreOptions {
    * matched against tokens without it.
    */
   secret: string;
+  /** Upper bound on live (unexpired) records; protects memory under preview spam. */
+  maxRecords?: number;
   clock?: Clock;
   randomBytes?: RandomBytes;
 }
 
+const DEFAULT_MAX_RECORDS = 1000;
+
 export class ConfirmationStore {
   private readonly records = new Map<string, ConfirmationRecord>();
   private readonly secret: string;
+  private readonly maxRecords: number;
   private readonly clock: Clock;
   private readonly randomBytes: RandomBytes;
 
   constructor({
     secret,
+    maxRecords = DEFAULT_MAX_RECORDS,
     clock = () => new Date(),
     randomBytes = secureRandomBytes,
   }: ConfirmationStoreOptions) {
@@ -87,8 +93,35 @@ export class ConfirmationStore {
       throw new Error("ConfirmationStore requires a non-empty secret");
     }
     this.secret = secret;
+    this.maxRecords = maxRecords;
     this.clock = clock;
     this.randomBytes = randomBytes;
+  }
+
+  /** Number of records currently held (consumed records stay until they expire). */
+  get size(): number {
+    return this.records.size;
+  }
+
+  private isExpired(record: ConfirmationRecord, now: number): boolean {
+    const expiresAt = new Date(record.expiresAt).getTime();
+    return !Number.isFinite(expiresAt) || now >= expiresAt;
+  }
+
+  /** Forget every record past its expiry. Called on each write and read. */
+  private sweep(): void {
+    const now = this.clock().getTime();
+    for (const [tokenHash, record] of this.records) {
+      if (this.isExpired(record, now)) this.records.delete(tokenHash);
+    }
+  }
+
+  /** Non-consuming look at a token's state, for accurate error reporting. */
+  inspect(token: string): "unknown" | "live" | "consumed" | "expired" {
+    const record = this.records.get(this.hashToken(token));
+    if (!record) return "unknown";
+    if (this.isExpired(record, this.clock().getTime())) return "expired";
+    return record.consumedAt ? "consumed" : "live";
   }
 
   /** Keyed digest of a token; the only form in which a token is ever stored. */
@@ -97,6 +130,13 @@ export class ConfirmationStore {
   }
 
   async mint(input: ConfirmationInput): Promise<string> {
+    this.sweep();
+    if (this.records.size >= this.maxRecords) {
+      throw new Error(
+        "Too many pending confirmations; wait for existing previews to expire",
+      );
+    }
+
     const bytes = this.randomBytes(32);
     if (bytes.byteLength !== 32) {
       throw new TypeError("RandomBytes must return exactly 32 bytes");
@@ -126,10 +166,13 @@ export class ConfirmationStore {
     const tokenHash = this.hashToken(token);
     const record = this.records.get(tokenHash);
     if (!record) throw new ConfirmationError("CONFIRMATION_INVALID");
-    if (record.consumedAt) throw new ConfirmationError("CONFIRMATION_USED");
-    if (this.clock().getTime() >= new Date(record.expiresAt).getTime()) {
-      throw new ConfirmationError("CONFIRMATION_EXPIRED");
+    if (this.isExpired(record, this.clock().getTime())) {
+      this.sweep();
+      throw new ConfirmationError(
+        record.consumedAt ? "CONFIRMATION_INVALID" : "CONFIRMATION_EXPIRED",
+      );
     }
+    if (record.consumedAt) throw new ConfirmationError("CONFIRMATION_USED");
     if (!bindingsMatch(record, expected)) {
       throw new ConfirmationError("CONFIRMATION_MISMATCH");
     }

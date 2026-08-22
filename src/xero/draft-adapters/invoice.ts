@@ -2,35 +2,44 @@ import { z } from "zod";
 
 import type { DraftResourceAdapter } from "../../drafts/types.js";
 import type { XeroApi } from "../client.js";
+import {
+  amount,
+  lines,
+  longText,
+  parseFor,
+  text,
+  versionOf,
+  withoutUndefined,
+} from "./shared.js";
 
 const trackingSchema = z.object({
-  name: z.string(),
-  option: z.string(),
-  trackingCategoryID: z.string(),
+  name: text(),
+  option: text(),
+  trackingCategoryID: text(),
 });
 
 const lineItemSchema = z.object({
-  description: z.string(),
-  quantity: z.number(),
-  unitAmount: z.number(),
-  accountCode: z.string(),
-  taxType: z.string(),
-  itemCode: z.string().optional(),
-  tracking: z.array(trackingSchema).optional(),
+  description: longText(),
+  quantity: amount(),
+  unitAmount: amount(),
+  accountCode: text(),
+  taxType: text(),
+  itemCode: text().optional(),
+  tracking: lines(trackingSchema).optional(),
 });
 
 const invoicePayloadSchema = z.object({
-  contactId: z.string().optional(),
-  lineItems: z.array(lineItemSchema).optional(),
+  contactId: text().optional(),
+  lineItems: lines(lineItemSchema).optional(),
   type: z.enum(["ACCREC", "ACCPAY"]).optional(),
-  reference: z.string().optional(),
-  date: z.string().optional(),
-  dueDate: z.string().optional(),
+  reference: text().optional(),
+  date: text().optional(),
+  dueDate: text().optional(),
 });
 
 const invoiceCreatePayloadSchema = invoicePayloadSchema.extend({
-  contactId: z.string(),
-  lineItems: z.array(lineItemSchema),
+  contactId: text(),
+  lineItems: lines(lineItemSchema),
   type: z.enum(["ACCREC", "ACCPAY"]),
 });
 
@@ -39,15 +48,8 @@ export type InvoiceDraftPayload = z.infer<typeof invoicePayloadSchema>;
 export interface InvoiceRecord {
   invoiceID: string;
   status?: string;
-  updatedDateUTCString?: string;
-  updatedDateUTC?: Date;
+  updatedDateUTC?: Date | string;
   [key: string]: unknown;
-}
-
-function withoutUndefined<T extends Record<string, unknown>>(value: T) {
-  return Object.fromEntries(
-    Object.entries(value).filter(([, field]) => field !== undefined),
-  );
 }
 
 function mapPayload(payload: InvoiceDraftPayload) {
@@ -67,8 +69,12 @@ export function createInvoiceAdapter(
   return {
     kind: "invoice",
 
-    parsePayload(input) {
-      return withoutUndefined(invoicePayloadSchema.parse(input));
+    parsePayload(input, operation) {
+      return parseFor(
+        { partial: invoicePayloadSchema, create: invoiceCreatePayloadSchema },
+        input,
+        operation,
+      );
     },
 
     get(id) {
@@ -111,12 +117,7 @@ export function createInvoiceAdapter(
     },
 
     getVersion(record) {
-      return {
-        value:
-          record.updatedDateUTCString ??
-          record.updatedDateUTC?.toISOString() ??
-          record.invoiceID,
-      };
+      return versionOf(record.updatedDateUTC);
     },
   };
 }

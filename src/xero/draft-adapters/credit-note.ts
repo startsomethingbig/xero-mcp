@@ -2,26 +2,35 @@ import { z } from "zod";
 
 import type { DraftResourceAdapter } from "../../drafts/types.js";
 import type { XeroApi } from "../client.js";
+import {
+  amount,
+  lines,
+  longText,
+  parseFor,
+  text,
+  versionOf,
+  withoutUndefined,
+} from "./shared.js";
 
 const lineItemSchema = z.object({
-  description: z.string(),
-  quantity: z.number(),
-  unitAmount: z.number(),
-  accountCode: z.string(),
-  taxType: z.string(),
+  description: longText(),
+  quantity: amount(),
+  unitAmount: amount(),
+  accountCode: text(),
+  taxType: text(),
 });
 
 const creditNotePayloadSchema = z.object({
-  contactId: z.string().optional(),
-  lineItems: z.array(lineItemSchema).optional(),
+  contactId: text().optional(),
+  lineItems: lines(lineItemSchema).optional(),
   type: z.enum(["ACCRECCREDIT", "ACCPAYCREDIT"]).optional(),
-  reference: z.string().optional(),
-  date: z.string().optional(),
+  reference: text().optional(),
+  date: text().optional(),
 });
 
 const creditNoteCreatePayloadSchema = creditNotePayloadSchema.extend({
-  contactId: z.string(),
-  lineItems: z.array(lineItemSchema),
+  contactId: text(),
+  lineItems: lines(lineItemSchema),
   type: z.enum(["ACCRECCREDIT", "ACCPAYCREDIT"]),
 });
 
@@ -30,15 +39,8 @@ export type CreditNoteDraftPayload = z.infer<typeof creditNotePayloadSchema>;
 export interface CreditNoteRecord {
   creditNoteID: string;
   status?: string;
-  updatedDateUTCString?: string;
-  updatedDateUTC?: Date;
+  updatedDateUTC?: Date | string;
   [key: string]: unknown;
-}
-
-function withoutUndefined<T extends Record<string, unknown>>(value: T) {
-  return Object.fromEntries(
-    Object.entries(value).filter(([, field]) => field !== undefined),
-  );
 }
 
 function mapPayload(payload: CreditNoteDraftPayload) {
@@ -57,8 +59,15 @@ export function createCreditNoteAdapter(
   return {
     kind: "credit_note",
 
-    parsePayload(input) {
-      return withoutUndefined(creditNotePayloadSchema.parse(input));
+    parsePayload(input, operation) {
+      return parseFor(
+        {
+          partial: creditNotePayloadSchema,
+          create: creditNoteCreatePayloadSchema,
+        },
+        input,
+        operation,
+      );
     },
 
     get(id) {
@@ -96,12 +105,7 @@ export function createCreditNoteAdapter(
     },
 
     getVersion(record) {
-      return {
-        value:
-          record.updatedDateUTCString ??
-          record.updatedDateUTC?.toISOString() ??
-          record.creditNoteID,
-      };
+      return versionOf(record.updatedDateUTC);
     },
   };
 }

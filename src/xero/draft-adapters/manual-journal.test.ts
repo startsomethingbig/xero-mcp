@@ -56,12 +56,15 @@ describe("manual-journal draft adapter", () => {
     const adapter = createManualJournalAdapter(fakeApi());
 
     expect(
-      adapter.parsePayload({
-        ...manualJournalPayload,
-        status: "POSTED",
-        manualJournalID: "journal-1",
-        totalDebit: 125,
-      }),
+      adapter.parsePayload(
+        {
+          ...manualJournalPayload,
+          status: "POSTED",
+          manualJournalID: "journal-1",
+          totalDebit: 125,
+        },
+        "update",
+      ),
     ).toEqual(manualJournalPayload);
   });
 
@@ -125,18 +128,25 @@ describe("manual-journal draft adapter", () => {
     expect(
       adapter.getVersion({
         manualJournalID: "journal-1",
-        updatedDateUTCString: "2026-08-09T01:00:00.000Z",
-        updatedDateUTC: new Date("2026-08-09T02:00:00.000Z"),
-      }),
-    ).toEqual({ value: "2026-08-09T01:00:00.000Z" });
-    expect(
-      adapter.getVersion({
-        manualJournalID: "journal-1",
         updatedDateUTC: new Date("2026-08-09T02:00:00.000Z"),
       }),
     ).toEqual({ value: "2026-08-09T02:00:00.000Z" });
-    expect(adapter.getVersion({ manualJournalID: "journal-1" })).toEqual({
-      value: "journal-1",
-    });
+    expect(
+      adapter.getVersion({ manualJournalID: "journal-1" }),
+    ).toBeUndefined();
+  });
+
+  it("accepts only https source-document links", () => {
+    const adapter = createManualJournalAdapter(fakeApi());
+
+    expect(() =>
+      adapter.parsePayload({ url: "javascript:alert(1)" }, "update"),
+    ).toThrow();
+    expect(() =>
+      adapter.parsePayload({ url: "http://example.test/doc" }, "update"),
+    ).toThrow();
+    expect(
+      adapter.parsePayload({ url: "https://example.test/doc" }, "update"),
+    ).toEqual({ url: "https://example.test/doc" });
   });
 });
