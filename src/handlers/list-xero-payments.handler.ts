@@ -3,6 +3,7 @@ import { XeroClientResponse } from "../types/tool-response.js";
 import { formatError } from "../helpers/format-error.js";
 import { Payment } from "xero-node";
 import { getClientHeaders } from "../clients/xero-client.js";
+import { guidFilter, stringFilter, whereAll } from "../helpers/xero-where.js";
 
 async function getPayments(
   page: number = 1,
@@ -20,25 +21,14 @@ async function getPayments(
 ): Promise<Payment[]> {
   await xeroClient.authenticate();
 
-  // Build where clause for filtering
-  const whereConditions: string[] = [];
-
-  if (invoiceId) {
-    whereConditions.push(`Invoice.InvoiceID==guid("${invoiceId}")`);
-  }
-  if (invoiceNumber) {
-    whereConditions.push(`Invoice.InvoiceNumber=="${invoiceNumber}"`);
-  }
-  if (paymentId) {
-    whereConditions.push(`PaymentID==guid("${paymentId}")`);
-  }
-  if (reference) {
-    whereConditions.push(`Reference=="${reference}"`);
-  }
-
-  // Combine conditions
-  const where =
-    whereConditions.length > 0 ? whereConditions.join(" AND ") : undefined;
+  const where = whereAll([
+    invoiceId ? guidFilter("Invoice.InvoiceID", invoiceId) : undefined,
+    invoiceNumber
+      ? stringFilter("Invoice.InvoiceNumber", invoiceNumber)
+      : undefined,
+    paymentId ? guidFilter("PaymentID", paymentId) : undefined,
+    reference ? stringFilter("Reference", reference) : undefined,
+  ]);
 
   const response = await xeroClient.accountingApi.getPayments(
     xeroClient.tenantId,

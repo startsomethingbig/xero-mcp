@@ -1,7 +1,7 @@
 import { ManualJournal } from "xero-node";
 import { listXeroManualJournals } from "../../handlers/list-xero-manual-journals.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
-import { z } from "zod";
+import { isoDate, page, xeroId } from "../schemas.js";
 
 const ListManualJournalsTool = CreateXeroTool(
   "list-manual-journals",
@@ -12,17 +12,15 @@ The response presents a complete overview of all manual journals currently regis
 Ask the user if they want the next page of manual journals after running this tool if 10 manual journals are returned.
 If they want the next page, call this tool again with the next page number, modified date, and the manual journal ID if one was provided in the previous call.`,
   {
-    manualJournalId: z
-      .string()
+    manualJournalId: xeroId()
       .optional()
       .describe("Optional ID of the manual journal to retrieve"),
-    modifiedAfter: z
-      .string()
+    modifiedAfter: isoDate()
       .optional()
       .describe(
         "Optional date YYYY-MM-DD to filter journals modified after this date",
       ),
-    page: z.number().optional().describe("Optional page number for pagination"),
+    page: page().optional().describe("Optional page number for pagination"),
     // TODO: where, order
   },
   async (args) => {

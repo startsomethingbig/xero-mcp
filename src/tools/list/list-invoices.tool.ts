@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { filterText, page, xeroId } from "../schemas.js";
 import { listXeroInvoices } from "../../handlers/list-xero-invoices.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { formatLineItem } from "../../helpers/format-line-item.js";
@@ -13,10 +14,10 @@ const ListInvoicesTool = CreateXeroTool(
   If they want the next page, call this tool again with the next page number \
   and the contact or invoice number if one was provided in the previous call.",
   {
-    page: z.number(),
-    contactIds: z.array(z.string()).optional(),
+    page: page(),
+    contactIds: z.array(xeroId()).optional(),
     invoiceNumbers: z
-      .array(z.string())
+      .array(filterText())
       .optional()
       .describe("If provided, invoice line items will also be returned"),
   },

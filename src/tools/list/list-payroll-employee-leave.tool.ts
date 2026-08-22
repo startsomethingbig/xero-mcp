@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { xeroId } from "../schemas.js";
 import { listXeroPayrollEmployeeLeave } from "../../handlers/list-xero-payroll-employee-leave.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { EmployeeLeave } from "../../types/payroll-nz-types.js";
@@ -7,9 +7,9 @@ const ListPayrollEmployeeLeaveTool = CreateXeroTool(
   "list-payroll-employee-leave",
   "List all leave records for a specific employee in Xero. This shows all leave transactions including approved, pending, and processed time off. Provide an employee ID to see their leave history.",
   {
-    employeeId: z
-      .string()
-      .describe("The Xero employee ID to fetch leave records for"),
+    employeeId: xeroId().describe(
+      "The Xero employee ID to fetch leave records for",
+    ),
   },
   async ({ employeeId }) => {
     const response = await listXeroPayrollEmployeeLeave(employeeId);

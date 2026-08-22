@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { filterText, page, xeroId } from "../schemas.js";
 import { listXeroQuotes } from "../../handlers/list-xero-quotes.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 
@@ -9,9 +9,9 @@ const ListQuotesTool = CreateXeroTool(
   Ask the user if they want the next page of quotes after running this tool if 10 quotes are returned. 
   If they do, call this tool again with the page number and the contact provided in the previous call.`,
   {
-    page: z.number(),
-    contactId: z.string().optional(),
-    quoteNumber: z.string().optional(),
+    page: page(),
+    contactId: xeroId().optional(),
+    quoteNumber: filterText().optional(),
   },
   async ({ page, contactId, quoteNumber }) => {
     const response = await listXeroQuotes(page, contactId, quoteNumber);

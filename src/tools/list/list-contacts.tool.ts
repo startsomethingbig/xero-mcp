@@ -1,18 +1,17 @@
 import { listXeroContacts } from "../../handlers/list-xero-contacts.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
-import { z } from "zod";
+import { filterText, page } from "../schemas.js";
 
 const ListContactsTool = CreateXeroTool(
   "list-contacts",
   "List all contacts in Xero. This includes Suppliers and Customers.",
   {
-    page: z.number().optional().describe(
+    page: page().optional().describe(
       "Optional page number to retrieve for pagination. \
       If not provided, the first page will be returned. If 100 contacts are returned, \
       call this tool again with the next page number.",
     ),
-    searchTerm: z
-      .string()
+    searchTerm: filterText()
       .optional()
       .describe(
         "Search parameter that performs a case-insensitive text search across the Name, FirstName, LastName, ContactNumber and EmailAddress fields",

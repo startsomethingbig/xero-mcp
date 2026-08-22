@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { page } from "../schemas.js";
 import { listXeroItems } from "../../handlers/list-xero-items.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 
@@ -6,7 +6,7 @@ const ListItemsTool = CreateXeroTool(
   "list-items",
   "Lists all items in Xero. Use this tool to get the item codes and descriptions to be used when creating invoices in Xero",
   {
-    page: z.number(),
+    page: page(),
   },
   async ({ page }) => {
     const response = await listXeroItems(page);

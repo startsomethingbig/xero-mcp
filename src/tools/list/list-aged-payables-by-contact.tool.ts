@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { isoDate, xeroId } from "../schemas.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { formatAgedReportFilter } from "../../helpers/format-aged-report-filter.js";
 import { listXeroAgedPayablesByContact } from "../../handlers/list-aged-payables-by-contact.handler.js";
@@ -8,21 +8,18 @@ const ListAgedPayablesByContact = CreateXeroTool(
   `Lists the aged payables in Xero.
   This shows aged payables for a certain contact up to a report date.`,
   {
-    contactId: z.string(),
-    reportDate: z
-      .string()
+    contactId: xeroId(),
+    reportDate: isoDate()
       .optional()
       .describe(
         "Optional date to retrieve aged payables in YYYY-MM-DD format. If none is provided, defaults to end of the current month.",
       ),
-    invoicesFromDate: z
-      .string()
+    invoicesFromDate: isoDate()
       .optional()
       .describe(
         "Optional from date in YYYY-MM-DD format. If provided, will only show payable invoices after this date for the contact.",
       ),
-    invoicesToDate: z
-      .string()
+    invoicesToDate: isoDate()
       .optional()
       .describe(
         "Optional to date in YYYY-MM-DD format. If provided, will only show payable invoices before this date for the contact.",

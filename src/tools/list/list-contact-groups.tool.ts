@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { xeroId } from "../schemas.js";
 import { listXeroContactGroups } from "../../handlers/list-xero-contact-groups.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 
@@ -7,8 +7,7 @@ const ListContactGroupsTool = CreateXeroTool(
   `List all contact groups in Xero.
   You can optionally specify a contact group ID to retrieve details for that specific group, including its contacts.`,
   {
-    contactGroupId: z
-      .string()
+    contactGroupId: xeroId()
       .optional()
       .describe("Optional ID of the contact group to retrieve"),
   },

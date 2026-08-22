@@ -1,6 +1,7 @@
 import { xeroClient } from "../clients/xero-client.js";
 import { XeroClientResponse } from "../types/tool-response.js";
 import { formatError } from "../helpers/format-error.js";
+import { guidFilter } from "../helpers/xero-where.js";
 import { CreditNote } from "xero-node";
 import { getClientHeaders } from "../clients/xero-client.js";
 
@@ -13,7 +14,7 @@ async function getCreditNotes(
   const response = await xeroClient.accountingApi.getCreditNotes(
     xeroClient.tenantId,
     undefined, // ifModifiedSince
-    contactId ? `Contact.ContactID=guid("${contactId}")` : undefined, // where
+    contactId ? guidFilter("Contact.ContactID", contactId) : undefined, // where
     "UpdatedDateUTC DESC", // order
     page, // page
     undefined, // unitdp

@@ -3,6 +3,7 @@ import { BankTransaction } from "xero-node";
 import { getClientHeaders } from "../clients/xero-client.js";
 import { XeroClientResponse } from "../types/tool-response.js";
 import { formatError } from "../helpers/format-error.js";
+import { guidFilter } from "../helpers/xero-where.js";
 
 async function getBankTransactions(
   page: number,
@@ -14,7 +15,7 @@ async function getBankTransactions(
     xeroClient.tenantId,
     undefined, // ifModifiedSince
     bankAccountId
-      ? `BankAccount.AccountID=guid("${bankAccountId}")`
+      ? guidFilter("BankAccount.AccountID", bankAccountId)
       : undefined, // where
     "Date DESC", // order
     page, // page

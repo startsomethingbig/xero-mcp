@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { page, xeroId } from "../schemas.js";
 import { listXeroCreditNotes } from "../../handlers/list-xero-credit-notes.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 
@@ -12,8 +12,8 @@ const ListCreditNotesTool = CreateXeroTool(
   If they want the next page, call this tool again with the next page number 
   and the contact if one was provided in the previous call.`,
   {
-    page: z.number(),
-    contactId: z.string().optional(),
+    page: page(),
+    contactId: xeroId().optional(),
   },
   async ({ page, contactId }) => {
     const response = await listXeroCreditNotes(page, contactId);

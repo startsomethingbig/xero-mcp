@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { page, xeroId } from "../schemas.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { listXeroBankTransactions } from "../../handlers/list-xero-bank-transactions.handler.js";
 import { formatLineItem } from "../../helpers/format-line-item.js";
@@ -13,8 +13,8 @@ const ListBankTransactionsTool = CreateXeroTool(
   If they do, call this tool again with the next page number and the bank account
   if one was provided in the provided in the previous call.`,
   {
-    page: z.number(),
-    bankAccountId: z.string().optional(),
+    page: page(),
+    bankAccountId: xeroId().optional(),
   },
   async ({ bankAccountId, page }) => {
     const response = await listXeroBankTransactions(page, bankAccountId);

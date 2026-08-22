@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { xeroId } from "../schemas.js";
 
 import { getXeroPayrollTimesheet } from "../../handlers/get-xero-payroll-timesheet.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
@@ -8,7 +8,7 @@ const GetPayrollTimesheetTool = CreateXeroTool(
   `Retrieve a single payroll timesheet from Xero by its ID.
 This provides details such as the timesheet ID, employee ID, start and end dates, total hours, and the last updated date.`,
   {
-    timesheetID: z.string().describe("The ID of the timesheet to retrieve."),
+    timesheetID: xeroId().describe("The ID of the timesheet to retrieve."),
   },
   async (params: { timesheetID: string }) => {
     const { timesheetID } = params;

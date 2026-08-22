@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isoDate, periods } from "../schemas.js";
 import { listXeroProfitAndLoss } from "../../handlers/list-xero-profit-and-loss.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 
@@ -6,16 +7,13 @@ const ListProfitAndLossTool = CreateXeroTool(
   "list-profit-and-loss",
   "Lists profit and loss report in Xero. This provides a summary of revenue, expenses, and profit or loss over a specified period of time.",
   {
-    fromDate: z
-      .string()
+    fromDate: isoDate()
       .optional()
       .describe("Optional start date in YYYY-MM-DD format"),
-    toDate: z
-      .string()
+    toDate: isoDate()
       .optional()
       .describe("Optional end date in YYYY-MM-DD format"),
-    periods: z
-      .number()
+    periods: periods()
       .optional()
       .describe("Optional number of periods to compare"),
     timeframe: z

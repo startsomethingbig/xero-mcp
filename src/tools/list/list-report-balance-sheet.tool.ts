@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isoDate, periods, xeroId } from "../schemas.js";
 import { listXeroReportBalanceSheet } from "../../handlers/list-xero-report-balance-sheet.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { ListReportBalanceSheetParams } from "../../types/list-report-balance-sheet-params.js";
@@ -7,21 +8,18 @@ const ListReportBalanceSheetTool = CreateXeroTool(
   "list-report-balance-sheet",
   "List the Balance Sheet report from Xero.",
   {
-    date: z.string().optional().describe("Optional date in YYYY-MM-DD format"),
-    periods: z
-      .number()
+    date: isoDate().optional().describe("Optional date in YYYY-MM-DD format"),
+    periods: periods()
       .optional()
       .describe("Optional number of periods to compare"),
     timeframe: z
       .enum(["MONTH", "QUARTER", "YEAR"])
       .optional()
       .describe("Optional timeframe for the report (MONTH, QUARTER, YEAR)"),
-    trackingOptionID1: z
-      .string()
+    trackingOptionID1: xeroId()
       .optional()
       .describe("Optional tracking option ID 1"),
-    trackingOptionID2: z
-      .string()
+    trackingOptionID2: xeroId()
       .optional()
       .describe("Optional tracking option ID 2"),
     standardLayout: z

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { filterText, page, xeroId } from "../schemas.js";
 import { listXeroPayments } from "../../handlers/list-xero-payments.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { Payment } from "xero-node";
@@ -47,11 +47,11 @@ const ListPaymentsTool = CreateXeroTool(
   Ask the user if they want to see payments for a specific invoice, contact, payment or reference before running.
   If many payments are returned, ask the user if they want to see the next page.`,
   {
-    page: z.number().default(1),
-    invoiceNumber: z.string().optional(),
-    invoiceId: z.string().optional(),
-    paymentId: z.string().optional(),
-    reference: z.string().optional(),
+    page: page().default(1),
+    invoiceNumber: filterText().optional(),
+    invoiceId: xeroId().optional(),
+    paymentId: xeroId().optional(),
+    reference: filterText().optional(),
   },
   async ({ page, invoiceNumber, invoiceId, paymentId, reference }) => {
     const response = await listXeroPayments(page, {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isoDate } from "../schemas.js";
 import { listXeroTrialBalance } from "../../handlers/list-xero-trial-balance.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 
@@ -6,7 +7,7 @@ const ListTrialBalanceTool = CreateXeroTool(
   "list-trial-balance",
   "Lists trial balance in Xero. This provides a snapshot of the general ledger, showing debit and credit balances for each account.",
   {
-    date: z.string().optional().describe("Optional date in YYYY-MM-DD format"),
+    date: isoDate().optional().describe("Optional date in YYYY-MM-DD format"),
     paymentsOnly: z
       .boolean()
       .optional()
